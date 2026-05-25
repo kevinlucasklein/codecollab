@@ -47,15 +47,10 @@ const io = new SocketIOServer<ClientToServerEvents, ServerToClientEvents>(
   }
 );
 
-// TODO: Step 6 — Wire up Yjs document sync + JWT auth middleware
+import { setupWebSocket } from "./ws/documentSync.js";
 
-io.on("connection", (socket) => {
-  console.log(`[socket] connected: ${socket.id}`);
-
-  socket.on("disconnect", (reason) => {
-    console.log(`[socket] disconnected: ${socket.id} (${reason})`);
-  });
-});
+// Wire up Yjs document sync + JWT auth middleware
+setupWebSocket(io);
 
 // Start
 httpServer.listen(PORT, () => {
