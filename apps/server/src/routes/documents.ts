@@ -38,6 +38,62 @@ documentsRouter.get("/", async (req, res) => {
 });
 
 // ----------------------------------------------------------------------------
+// POST /api/documents/from-github
+// Creates a new document seeded from a GitHub file
+// ----------------------------------------------------------------------------
+documentsRouter.post("/from-github", authenticate, async (req, res) => {
+  const { repoFullName, branch, filePath } = req.body;
+
+  if (!repoFullName || !branch || !filePath) {
+    return res.status(400).json({ success: false, error: "Missing GitHub parameters" });
+  }
+
+  if (!req.user?.githubAccessToken) {
+    return res.status(403).json({ success: false, error: "GitHub not connected" });
+  }
+
+  try {
+    const [owner, repo] = repoFullName.split("/");
+    const octokit = new (await import("octokit")).Octokit({ auth: req.user.githubAccessToken });
+
+    // Fetch file content from GitHub
+    const response = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path: filePath,
+      ref: branch,
+    });
+
+    if (Array.isArray(response.data) || response.data.type !== "file") {
+      return res.status(400).json({ success: false, error: "Path is not a file" });
+    }
+
+    const content = Buffer.from(response.data.content, "base64").toString("utf-8");
+    const title = filePath.split("/").pop() || "Untitled from GitHub";
+
+    // Create the document in DB
+    const result = await query(
+      `INSERT INTO documents (title, owner_id, language, github_repo, github_branch, github_file_path) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [title, req.user.id, "plaintext", repoFullName, branch, filePath]
+    );
+
+    // We do NOT seed the Yjs state here in the REST API. 
+    // The frontend will do it upon first connection if the document is empty.
+    // We just return the raw initial content to the frontend.
+
+    return res.status(201).json({
+      success: true,
+      data: result.rows[0],
+      initialContent: content
+    });
+  } catch (error: any) {
+    console.error("Create from GitHub error:", error);
+    return res.status(500).json({ success: false, error: "Failed to create document from GitHub" });
+  }
+});
+
+// ----------------------------------------------------------------------------
 // POST /api/documents
 // Create a new document
 // ----------------------------------------------------------------------------
