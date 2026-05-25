@@ -119,8 +119,8 @@ export default function DashboardPage() {
         ) : documents.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>📄</div>
-            <h3>No documents yet</h3>
-            <p>Create your first collaborative document to get started.</p>
+            <h3>No documents found</h3>
+            <p>Create your first code review session!</p>
             <button className={styles.newButton} onClick={handleCreateNew}>
               Create Document
             </button>
