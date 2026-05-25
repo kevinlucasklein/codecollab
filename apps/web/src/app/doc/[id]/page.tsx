@@ -75,6 +75,11 @@ export default function DocumentPage() {
     );
   }
 
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert("Share link copied to clipboard!"); // Simple alert for Layer 1
+  };
+
   return (
     <div className={styles.container}>
       {/* Top Header */}
@@ -90,6 +95,9 @@ export default function DocumentPage() {
             <div className={`${styles.dot} ${isConnected ? styles.connected : ""}`}></div>
             {isConnected ? (isSynced ? "Synced" : "Syncing...") : "Disconnected"}
           </div>
+          <button onClick={copyShareLink} className={styles.shareButton}>
+            Share
+          </button>
         </div>
 
         {/* Presence / Active Users */}

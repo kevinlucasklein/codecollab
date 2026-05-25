@@ -66,6 +66,24 @@
   box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
 }
 
+.shareButton {
+  background: rgba(108, 99, 255, 0.1);
+  color: var(--color-accent);
+  border: 1px solid rgba(108, 99, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: var(--spacing-sm);
+  transition: all var(--transition-fast);
+}
+
+.shareButton:hover {
+  background: var(--color-accent);
+  color: white;
+  box-shadow: 0 0 10px var(--color-accent-glow);
+}
+
 /* Presence Bar */
 .presenceBar {
   display: flex;
