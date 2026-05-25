@@ -1,0 +1,108 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "../../../lib/auth";
+import { useYjsSync } from "../../../hooks/useYjsSync";
+import { Editor } from "../../../components/Editor";
+import { PresenceBar } from "../../../components/PresenceBar";
+import styles from "../../../components/editor.module.css";
+import type { Document } from "@codecollab/shared";
+
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
+
+export default function DocumentPage() {
+  const params = useParams();
+  const docId = params.id as string;
+  const router = useRouter();
+  
+  const { user, token, isLoading } = useAuth();
+  const [docMeta, setDocMeta] = useState<Document | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // 1. Fetch document metadata
+  useEffect(() => {
+    if (!token || !docId) return;
+
+    const fetchDocMeta = async () => {
+      try {
+        const res = await fetch(`${SERVER_URL}/api/documents/${docId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        
+        if (data.success && data.data) {
+          setDocMeta(data.data);
+        } else {
+          setFetchError(data.error || "Document not found");
+        }
+      } catch (err) {
+        setFetchError("Failed to fetch document");
+      }
+    };
+
+    fetchDocMeta();
+  }, [docId, token]);
+
+  // 2. Initialize Yjs + Socket.io sync engine
+  const { doc, ytext, isConnected, isSynced, error: syncError, activeUsers } = useYjsSync(docId);
+
+  // Authentication check
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading || !user) {
+    return (
+      <div className={styles.loading}>
+        <div className={styles.spinner}></div>
+        <p>Authenticating...</p>
+      </div>
+    );
+  }
+
+  if (fetchError || syncError) {
+    return (
+      <div className={styles.errorBox}>
+        <h2>{fetchError || syncError}</h2>
+        <button className={styles.button} onClick={() => router.push("/")}>
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      {/* Top Header */}
+      <header className={styles.header}>
+        <div className={styles.titleSection}>
+          <Link href="/" className={styles.backButton} title="Back to Dashboard">
+            ←
+          </Link>
+          <span className={styles.docTitle}>
+            {docMeta ? docMeta.title : "Loading document..."}
+          </span>
+          <div className={styles.connectionStatus}>
+            <div className={`${styles.dot} ${isConnected ? styles.connected : ""}`}></div>
+            {isConnected ? (isSynced ? "Synced" : "Syncing...") : "Disconnected"}
+          </div>
+        </div>
+
+        {/* Presence / Active Users */}
+        <PresenceBar users={activeUsers} />
+      </header>
+
+      {/* Main Editor Area */}
+      <main className={styles.editorWrapper}>
+        <Editor 
+          ytext={ytext} 
+          disabled={!isConnected || !isSynced} 
+        />
+      </main>
+    </div>
+  );
+}
