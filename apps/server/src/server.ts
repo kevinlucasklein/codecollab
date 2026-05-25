@@ -27,10 +27,11 @@ app.get("/api/health", (_req, res) => {
 });
 
 import { authRouter } from "./routes/auth.js";
+import { documentsRouter } from "./routes/documents.js";
 
 // Mount routes
 app.use("/api/auth", authRouter);
-// TODO: Step 5 — Mount document routes
+app.use("/api/documents", documentsRouter);
 
 // HTTP Server
 const httpServer = http.createServer(app);
