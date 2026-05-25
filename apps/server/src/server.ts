@@ -26,7 +26,10 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// TODO: Step 4 — Mount auth routes
+import { authRouter } from "./routes/auth.js";
+
+// Mount routes
+app.use("/api/auth", authRouter);
 // TODO: Step 5 — Mount document routes
 
 // HTTP Server
