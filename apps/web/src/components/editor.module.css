@@ -134,24 +134,23 @@
   overflow: hidden;
 }
 
-.textarea {
+.editorContainer {
   flex: 1;
   width: 100%;
   height: 100%;
-  resize: none;
-  border: none;
   background: var(--color-bg-primary);
-  color: var(--color-text-primary);
   font-family: var(--font-mono);
   font-size: 14px;
   line-height: 1.6;
-  padding: var(--spacing-xl);
-  outline: none;
 }
 
-.textarea:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+/* Ensure CodeMirror takes up full height */
+.editorContainer > div {
+  height: 100%;
+}
+
+.editorContainer .cm-scroller {
+  padding: var(--spacing-md) 0;
 }
 
 /* Loading & Error */
