@@ -56,6 +56,9 @@ export interface ServerToClientEvents {
   "user:left": (userId: string) => void;
   "doc:loaded": (state: Uint8Array) => void;
   "doc:error": (message: string) => void;
+  "comment:thread_created": (thread: CommentThread) => void;
+  "comment:added": (comment: Comment) => void;
+  "comment:resolved": (threadId: string) => void;
 }
 
 export interface ClientToServerEvents {
@@ -63,6 +66,9 @@ export interface ClientToServerEvents {
   "doc:leave": (docId: string) => void;
   "sync:update": (docId: string, update: Uint8Array) => void;
   "sync:awareness": (docId: string, update: Uint8Array) => void;
+  "comment:thread_created": (docId: string, thread: CommentThread) => void;
+  "comment:added": (docId: string, comment: Comment) => void;
+  "comment:resolved": (docId: string, threadId: string) => void;
 }
 
 // Presence
