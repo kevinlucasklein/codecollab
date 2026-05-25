@@ -5,7 +5,7 @@ import { pool, query } from "../db/index.js"; // Note the .js extension for ES m
 import { authenticate } from "../middleware/auth.js";
 import type { RegisterInput, LoginInput, User } from "@codecollab/shared";
 
-export const authRouter = Router();
+export const authRouter: ReturnType<typeof Router> = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production-use-a-long-random-string";
 
