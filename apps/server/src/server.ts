@@ -55,9 +55,11 @@ import { setupWebSocket } from "./ws/documentSync.js";
 setupWebSocket(io);
 
 // Start
-httpServer.listen(PORT, () => {
-  console.log(`\n🚀 CodeCollab server running on http://localhost:${PORT}`);
-  console.log(`   CORS origin: ${CORS_ORIGIN}\n`);
-});
+if (process.env.NODE_ENV !== "test") {
+  httpServer.listen(PORT, () => {
+    console.log(`\n🚀 CodeCollab server running on http://localhost:${PORT}`);
+    console.log(`   CORS origin: ${CORS_ORIGIN}\n`);
+  });
+}
 
 export { app, io, httpServer };
