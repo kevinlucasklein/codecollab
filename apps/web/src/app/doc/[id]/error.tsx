@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import Link from "next/link";
-import styles from "../components/editor.module.css";
+import styles from "../../../components/editor.module.css";
 
 export default function ErrorBoundary({
   error,
