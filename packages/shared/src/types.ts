@@ -74,6 +74,26 @@ export interface PresenceUser {
   cursor?: { line: number; column: number };
 }
 
+// Comments
+
+export interface Comment {
+  id: string;
+  threadId: string;
+  authorId: string;
+  authorName?: string; // Hydrated by join
+  content: string;
+  createdAt: string;
+}
+
+export interface CommentThread {
+  id: string;
+  documentId: string;
+  lineNumber: number;
+  resolved: boolean;
+  createdAt: string;
+  comments: Comment[]; // Hydrated by join
+}
+
 // API Response Wrappers
 
 export interface ApiResponse<T> {
