@@ -8,6 +8,7 @@ export interface User {
   email: string;
   displayName: string;
   createdAt: string;
+  githubAccessToken?: string;
 }
 
 export interface AuthPayload {
@@ -35,6 +36,9 @@ export interface Document {
   language: string;
   createdAt: string;
   updatedAt: string;
+  githubRepo?: string;
+  githubBranch?: string;
+  githubFilePath?: string;
 }
 
 export interface CreateDocumentInput {

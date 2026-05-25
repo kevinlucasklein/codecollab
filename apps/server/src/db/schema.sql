@@ -42,3 +42,13 @@ CREATE TABLE IF NOT EXISTS comments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_comments_thread_id ON comments(thread_id);
+
+-- Layer 4: GitHub Integration
+
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS github_access_token VARCHAR(255);
+
+ALTER TABLE documents
+ADD COLUMN IF NOT EXISTS github_repo VARCHAR(255),
+ADD COLUMN IF NOT EXISTS github_branch VARCHAR(255),
+ADD COLUMN IF NOT EXISTS github_file_path VARCHAR(255);
