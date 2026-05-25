@@ -120,16 +120,19 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
     // Handle disconnect
     // Broadcast new comment thread
     socket.on("comment:thread_created", (docId, thread) => {
+      console.log(`[WS] comment:thread_created received for doc ${docId}, broadcasting...`);
       socket.to(docId).emit("comment:thread_created", thread);
     });
 
     // Broadcast new comment reply
     socket.on("comment:added", (docId, comment) => {
+      console.log(`[WS] comment:added received for doc ${docId}, broadcasting...`);
       socket.to(docId).emit("comment:added", comment);
     });
 
     // Broadcast thread resolved
     socket.on("comment:resolved", (docId, threadId) => {
+      console.log(`[WS] comment:resolved received for doc ${docId}, broadcasting...`);
       socket.to(docId).emit("comment:resolved", threadId);
     });
 

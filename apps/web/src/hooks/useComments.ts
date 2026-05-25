@@ -41,10 +41,12 @@ export function useComments(
     if (!socket) return;
 
     const onThreadCreated = (thread: CommentThread) => {
+      console.log("[useComments] Received comment:thread_created", thread);
       setThreads(prev => [...prev, thread]);
     };
 
     const onCommentAdded = (comment: Comment) => {
+      console.log("[useComments] Received comment:added", comment);
       setThreads(prev => prev.map(t => {
         if (t.id === comment.threadId) {
           return { ...t, comments: [...t.comments, comment] };
@@ -54,6 +56,7 @@ export function useComments(
     };
 
     const onThreadResolved = (threadId: string) => {
+      console.log("[useComments] Received comment:resolved", threadId);
       setThreads(prev => prev.filter(t => t.id !== threadId));
     };
 
@@ -85,6 +88,7 @@ export function useComments(
         // Optimistic update
         setThreads(prev => [...prev, json.data]);
         // Broadcast
+        console.log("[useComments] Emitting comment:thread_created", json.data);
         socket?.emit("comment:thread_created", documentId, json.data);
       }
     } catch (err) {
