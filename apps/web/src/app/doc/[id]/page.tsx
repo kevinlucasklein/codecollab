@@ -110,6 +110,7 @@ export default function DocumentPage() {
           ytext={ytext} 
           awareness={awareness}
           disabled={!isConnected || !isSynced} 
+          onCommentClick={(line) => alert(`Comment on line ${line} (Sidebar coming in Step 18!)`)}
         />
       </main>
     </div>

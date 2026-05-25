@@ -6,15 +6,17 @@ import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, basicSetup } from "codemirror";
 import { yCollab } from "y-codemirror.next";
 import { Awareness } from "y-protocols/awareness";
+import { commentGutterExtension } from "./extensions/commentGutter";
 import styles from "./editor.module.css";
 
 interface EditorProps {
   ytext: Y.Text;
   awareness: Awareness;
   disabled?: boolean;
+  onCommentClick?: (lineNumber: number) => void;
 }
 
-export function Editor({ ytext, awareness, disabled }: EditorProps) {
+export function Editor({ ytext, awareness, disabled, onCommentClick }: EditorProps) {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const readOnlyCompartment = useRef(new Compartment());
@@ -25,7 +27,8 @@ export function Editor({ ytext, awareness, disabled }: EditorProps) {
     const extensions = [
       basicSetup,
       yCollab(ytext, awareness),
-      readOnlyCompartment.current.of(EditorState.readOnly.of(disabled || false))
+      readOnlyCompartment.current.of(EditorState.readOnly.of(disabled || false)),
+      ...(onCommentClick ? [commentGutterExtension(onCommentClick)] : [])
     ];
 
     const state = EditorState.create({
