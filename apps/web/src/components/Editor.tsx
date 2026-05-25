@@ -5,14 +5,16 @@ import * as Y from "yjs";
 import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, basicSetup } from "codemirror";
 import { yCollab } from "y-codemirror.next";
+import { Awareness } from "y-protocols/awareness";
 import styles from "./editor.module.css";
 
 interface EditorProps {
   ytext: Y.Text;
+  awareness: Awareness;
   disabled?: boolean;
 }
 
-export function Editor({ ytext, disabled }: EditorProps) {
+export function Editor({ ytext, awareness, disabled }: EditorProps) {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const readOnlyCompartment = useRef(new Compartment());
@@ -22,7 +24,7 @@ export function Editor({ ytext, disabled }: EditorProps) {
 
     const extensions = [
       basicSetup,
-      yCollab(ytext, null as any),
+      yCollab(ytext, awareness),
       readOnlyCompartment.current.of(EditorState.readOnly.of(disabled || false))
     ];
 

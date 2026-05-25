@@ -46,7 +46,7 @@ export default function DocumentPage() {
   }, [docId, token]);
 
   // 2. Initialize Yjs + Socket.io sync engine
-  const { doc, ytext, isConnected, isSynced, error: syncError, activeUsers } = useYjsSync(docId);
+  const { doc, ytext, awareness, isConnected, isSynced, error: syncError, activeUsers } = useYjsSync(docId);
 
   // Authentication check
   useEffect(() => {
@@ -108,6 +108,7 @@ export default function DocumentPage() {
       <main className={styles.editorWrapper}>
         <Editor 
           ytext={ytext} 
+          awareness={awareness}
           disabled={!isConnected || !isSynced} 
         />
       </main>

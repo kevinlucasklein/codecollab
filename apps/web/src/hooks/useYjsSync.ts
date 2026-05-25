@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import * as Y from "yjs";
+import { Awareness, encodeAwarenessUpdate, applyAwarenessUpdate } from "y-protocols/awareness";
 import { io, Socket } from "socket.io-client";
 import type { 
   ServerToClientEvents, 
@@ -10,16 +11,30 @@ import { useAuth } from "../lib/auth";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
 
+// Simple color generator based on user ID
+function getUserColor(userId: string) {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash % 360);
+  return `hsl(${hue}, 70%, 50%)`;
+}
+
 export function useYjsSync(docId: string) {
   const { token, user } = useAuth();
-  const [doc] = useState(() => new Y.Doc());
-  const [ytext] = useState(() => doc.getText("monaco")); // The shared text type
   
+  // Yjs State
+  const [doc] = useState(() => new Y.Doc());
+  const [ytext] = useState(() => doc.getText("monaco"));
+  
+  // Awareness State (y-protocols)
+  const [awareness] = useState(() => new Awareness(doc));
+  
+  // React State
   const [isConnected, setIsConnected] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Custom presence state (since we aren't using y-protocols)
   const [activeUsers, setActiveUsers] = useState<Map<string, PresenceUser>>(new Map());
   
   const socketRef = useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
@@ -27,10 +42,17 @@ export function useYjsSync(docId: string) {
   useEffect(() => {
     if (!token || !user) return;
 
+    // Set local awareness state
+    awareness.setLocalStateField("user", {
+      name: user.displayName,
+      color: getUserColor(user.id),
+      colorLight: getUserColor(user.id) // y-codemirror.next uses this for cursor selection
+    });
+
     // 1. Initialize Socket.io connection
     const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
       auth: { token },
-      transports: ["websocket"], // force websocket to avoid polling issues
+      transports: ["websocket"],
     });
     
     socketRef.current = socket;
@@ -43,6 +65,10 @@ export function useYjsSync(docId: string) {
       socket.emit("doc:join", docId, (response) => {
         if (!response.success) {
           setError(response.error || "Failed to join document");
+        } else {
+          // Send initial awareness state
+          const update = encodeAwarenessUpdate(awareness, [awareness.clientID]);
+          socket.emit("sync:awareness", docId, update);
         }
       });
     });
@@ -57,83 +83,63 @@ export function useYjsSync(docId: string) {
       setIsConnected(false);
     });
 
-    // 3. Handle incoming document state (initial load)
-    socket.on("doc:loaded", (stateBuffer) => {
-      // Create a Uint8Array from the raw buffer/array
-      const state = new Uint8Array(stateBuffer);
-      Y.applyUpdate(doc, state);
-      setIsSynced(true);
-    });
-
-    // 4. Handle incoming incremental Yjs updates from other users
-    socket.on("sync:update", (updateBuffer) => {
-      const update = new Uint8Array(updateBuffer);
-      Y.applyUpdate(doc, update);
-    });
-
-    // 5. Presence: Someone joined
-    socket.on("user:joined", (newUser) => {
-      setActiveUsers((prev) => {
-        const next = new Map(prev);
-        next.set(newUser.id, {
-          id: newUser.id,
-          displayName: newUser.displayName,
-          color: newUser.color
-        });
-        return next;
-      });
-    });
-
-    // 6. Presence: Someone left
-    socket.on("user:left", (userId) => {
-      setActiveUsers((prev) => {
-        const next = new Map(prev);
-        next.delete(userId);
-        return next;
-      });
-    });
-
-    // 7. Yjs Local Edits -> emit to server
-    const handleYjsUpdate = (update: Uint8Array, origin: any) => {
-      if (origin !== "server") {
-        socket.emit("sync:update", docId, update);
-      }
-    };
-    
-    // We bind the observer to the doc, marking server updates with origin='server'
-    // so we don't reflect them back to the server. Wait, applyUpdate doesn't let you set origin 
-    // easily unless you use a transaction.
-    // Actually, Yjs Doc.on('update') receives the origin as the second parameter!
-    // So when we call Y.applyUpdate(doc, update, "server"), the origin is "server".
-    doc.on("update", handleYjsUpdate);
-
-    return () => {
-      doc.off("update", handleYjsUpdate);
-      socket.emit("doc:leave", docId);
-      socket.disconnect();
-    };
-  }, [docId, token, user, doc]);
-
-  // Expose a function to safely apply updates from the server, passing "server" as the origin
-  useEffect(() => {
-    const socket = socketRef.current;
-    if (!socket) return;
-    
-    // Re-bind the sync:update listener to pass "server" origin to applyUpdate
-    socket.off("sync:update");
-    socket.on("sync:update", (updateBuffer) => {
-      const update = new Uint8Array(updateBuffer);
-      Y.applyUpdate(doc, update, "server");
-    });
-    
-    // Re-bind doc:loaded as well
-    socket.off("doc:loaded");
+    // 3. Document Sync
     socket.on("doc:loaded", (stateBuffer) => {
       const state = new Uint8Array(stateBuffer);
       Y.applyUpdate(doc, state, "server");
       setIsSynced(true);
     });
-  }, [doc]);
 
-  return { doc, ytext, isConnected, isSynced, error, activeUsers };
+    socket.on("sync:update", (updateBuffer) => {
+      const update = new Uint8Array(updateBuffer);
+      Y.applyUpdate(doc, update, "server");
+    });
+
+    const handleYjsUpdate = (update: Uint8Array, origin: any) => {
+      if (origin !== "server") {
+        socket.emit("sync:update", docId, update);
+      }
+    };
+    doc.on("update", handleYjsUpdate);
+
+    // 4. Awareness Sync
+    socket.on("sync:awareness", (updateBuffer) => {
+      const update = new Uint8Array(updateBuffer);
+      applyAwarenessUpdate(awareness, update, "remote");
+    });
+
+    const handleAwarenessUpdate = ({ added, updated, removed }: any, origin: any) => {
+      if (origin === "local") {
+        const changedClients = added.concat(updated, removed);
+        const update = encodeAwarenessUpdate(awareness, changedClients);
+        socket.emit("sync:awareness", docId, update);
+      }
+      
+      // Update local React state for the PresenceBar
+      const users = new Map<string, PresenceUser>();
+      awareness.getStates().forEach((state, clientId) => {
+        if (state.user) {
+          // Use clientId as the unique key for cursors
+          users.set(clientId.toString(), {
+            id: clientId.toString(),
+            displayName: state.user.name,
+            color: state.user.color
+          });
+        }
+      });
+      setActiveUsers(users);
+    };
+    
+    awareness.on("update", handleAwarenessUpdate);
+
+    return () => {
+      doc.off("update", handleYjsUpdate);
+      awareness.off("update", handleAwarenessUpdate);
+      socket.emit("doc:leave", docId);
+      socket.disconnect();
+      awareness.destroy();
+    };
+  }, [docId, token, user, doc, awareness]);
+
+  return { doc, ytext, awareness, isConnected, isSynced, error, activeUsers };
 }
