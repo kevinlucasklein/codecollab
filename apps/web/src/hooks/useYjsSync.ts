@@ -36,8 +36,7 @@ export function useYjsSync(docId: string) {
   const [isSynced, setIsSynced] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeUsers, setActiveUsers] = useState<Map<string, PresenceUser>>(new Map());
-  
-  const socketRef = useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
+  const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
 
   useEffect(() => {
     if (!token || !user) return;
@@ -50,60 +49,60 @@ export function useYjsSync(docId: string) {
     });
 
     // 1. Initialize Socket.io connection
-    const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
+    const newSocket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
       auth: { token },
       transports: ["websocket"],
     });
     
-    socketRef.current = socket;
+    setSocket(newSocket);
 
-    socket.on("connect", () => {
+    newSocket.on("connect", () => {
       setIsConnected(true);
       setError(null);
       
       // 2. Join the document room
-      socket.emit("doc:join", docId, (response) => {
+      newSocket.emit("doc:join", docId, (response) => {
         if (!response.success) {
           setError(response.error || "Failed to join document");
         } else {
           // Send initial awareness state
           const update = encodeAwarenessUpdate(awareness, [awareness.clientID]);
-          socket.emit("sync:awareness", docId, update);
+          newSocket.emit("sync:awareness", docId, update);
         }
       });
     });
 
-    socket.on("disconnect", () => {
+    newSocket.on("disconnect", () => {
       setIsConnected(false);
       setIsSynced(false);
     });
 
-    socket.on("connect_error", (err) => {
+    newSocket.on("connect_error", (err) => {
       setError(`Connection error: ${err.message}`);
       setIsConnected(false);
     });
 
     // 3. Document Sync
-    socket.on("doc:loaded", (stateBuffer) => {
+    newSocket.on("doc:loaded", (stateBuffer) => {
       const state = new Uint8Array(stateBuffer);
       Y.applyUpdate(doc, state, "server");
       setIsSynced(true);
     });
 
-    socket.on("sync:update", (updateBuffer) => {
+    newSocket.on("sync:update", (updateBuffer) => {
       const update = new Uint8Array(updateBuffer);
       Y.applyUpdate(doc, update, "server");
     });
 
     const handleYjsUpdate = (update: Uint8Array, origin: any) => {
       if (origin !== "server") {
-        socket.emit("sync:update", docId, update);
+        newSocket.emit("sync:update", docId, update);
       }
     };
     doc.on("update", handleYjsUpdate);
 
     // 4. Awareness Sync
-    socket.on("sync:awareness", (updateBuffer) => {
+    newSocket.on("sync:awareness", (updateBuffer) => {
       const update = new Uint8Array(updateBuffer);
       applyAwarenessUpdate(awareness, update, "remote");
     });
@@ -112,7 +111,7 @@ export function useYjsSync(docId: string) {
       if (origin === "local") {
         const changedClients = added.concat(updated, removed);
         const update = encodeAwarenessUpdate(awareness, changedClients);
-        socket.emit("sync:awareness", docId, update);
+        newSocket.emit("sync:awareness", docId, update);
       }
       
       // Update local React state for the PresenceBar
@@ -135,11 +134,11 @@ export function useYjsSync(docId: string) {
     return () => {
       doc.off("update", handleYjsUpdate);
       awareness.off("update", handleAwarenessUpdate);
-      socket.emit("doc:leave", docId);
-      socket.disconnect();
+      newSocket.emit("doc:leave", docId);
+      newSocket.disconnect();
       awareness.destroy();
     };
   }, [docId, token, user, doc, awareness]);
 
-  return { doc, ytext, awareness, isConnected, isSynced, error, activeUsers };
+  return { doc, ytext, awareness, isConnected, isSynced, error, activeUsers, socket };
 }

@@ -5,8 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../lib/auth";
 import { useYjsSync } from "../../../hooks/useYjsSync";
+import { useComments } from "../../../hooks/useComments";
 import { Editor } from "../../../components/Editor";
 import { PresenceBar } from "../../../components/PresenceBar";
+import { CommentSidebar } from "../../../components/CommentSidebar";
 import styles from "../../../components/editor.module.css";
 import type { Document } from "@codecollab/shared";
 
@@ -20,6 +22,9 @@ export default function DocumentPage() {
   const { user, token, isLoading } = useAuth();
   const [docMeta, setDocMeta] = useState<Document | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  
+  // Comment UI state
+  const [activeNewLine, setActiveNewLine] = useState<number | null>(null);
 
   // 1. Fetch document metadata
   useEffect(() => {
@@ -46,7 +51,10 @@ export default function DocumentPage() {
   }, [docId, token]);
 
   // 2. Initialize Yjs + Socket.io sync engine
-  const { doc, ytext, awareness, isConnected, isSynced, error: syncError, activeUsers } = useYjsSync(docId);
+  const { doc, ytext, awareness, isConnected, isSynced, error: syncError, activeUsers, socket } = useYjsSync(docId);
+
+  // 3. Initialize Comments engine
+  const { threads, createThread, addReply, resolveThread } = useComments(docId, socket);
 
   // Authentication check
   useEffect(() => {
@@ -104,15 +112,28 @@ export default function DocumentPage() {
         <PresenceBar users={activeUsers} />
       </header>
 
-      {/* Main Editor Area */}
-      <main className={styles.editorWrapper}>
-        <Editor 
-          ytext={ytext} 
-          awareness={awareness}
-          disabled={!isConnected || !isSynced} 
-          onCommentClick={(line) => alert(`Comment on line ${line} (Sidebar coming in Step 18!)`)}
+      {/* Main Content Area */}
+      <div className={styles.mainContent} style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Main Editor Area */}
+        <main className={styles.editorWrapper} style={{ flex: 1, minWidth: 0 }}>
+          <Editor 
+            ytext={ytext} 
+            awareness={awareness}
+            disabled={!isConnected || !isSynced} 
+            onCommentClick={(line) => setActiveNewLine(line)}
+          />
+        </main>
+
+        {/* Sidebar */}
+        <CommentSidebar 
+          threads={threads}
+          activeNewLine={activeNewLine}
+          onCloseNewLine={() => setActiveNewLine(null)}
+          onCreateThread={createThread}
+          onAddReply={addReply}
+          onResolveThread={resolveThread}
         />
-      </main>
+      </div>
     </div>
   );
 }
