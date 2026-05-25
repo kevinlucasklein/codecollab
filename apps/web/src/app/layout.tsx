@@ -8,6 +8,8 @@ export const metadata: Metadata = {
     "Review code together in real time. Live editing, line-level comments, and presence — like Google Docs for code review.",
 };
 
+import { Toaster } from "react-hot-toast";
+
 export default function RootLayout({
   children,
 }: {
@@ -28,7 +30,19 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <Toaster 
+            position="bottom-right" 
+            toastOptions={{
+              style: {
+                background: '#2d2d3a',
+                color: '#fff',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+              }
+            }} 
+          />
+        </AuthProvider>
       </body>
     </html>
   );

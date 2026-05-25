@@ -11,6 +11,7 @@ import { PresenceBar } from "../../../components/PresenceBar";
 import { CommentSidebar } from "../../../components/CommentSidebar";
 import styles from "../../../components/editor.module.css";
 import type { Document } from "@codecollab/shared";
+import toast from "react-hot-toast";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
 
@@ -85,7 +86,7 @@ export default function DocumentPage() {
 
   const copyShareLink = () => {
     navigator.clipboard.writeText(window.location.href);
-    alert("Share link copied to clipboard!"); // Simple alert for Layer 1
+    toast.success("Share link copied to clipboard!");
   };
 
   return (
@@ -114,25 +115,37 @@ export default function DocumentPage() {
 
       {/* Main Content Area */}
       <div className={styles.mainContent} style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Main Editor Area */}
-        <main className={styles.editorWrapper} style={{ flex: 1, minWidth: 0 }}>
-          <Editor 
-            ytext={ytext} 
-            awareness={awareness}
-            disabled={!isConnected || !isSynced} 
-            onCommentClick={(line) => setActiveNewLine(line)}
-          />
-        </main>
+        {!docMeta ? (
+          <div className={styles.skeletonWrapper}>
+            <div className={styles.skeletonLine} style={{ width: '60%' }}></div>
+            <div className={styles.skeletonLine} style={{ width: '80%' }}></div>
+            <div className={styles.skeletonLine} style={{ width: '40%' }}></div>
+            <div className={styles.skeletonLine} style={{ width: '70%' }}></div>
+            <div className={styles.skeletonLine} style={{ width: '50%' }}></div>
+          </div>
+        ) : (
+          <>
+            {/* Main Editor Area */}
+            <main className={styles.editorWrapper} style={{ flex: 1, minWidth: 0 }}>
+              <Editor 
+                ytext={ytext} 
+                awareness={awareness}
+                disabled={!isConnected || !isSynced} 
+                onCommentClick={(line) => setActiveNewLine(line)}
+              />
+            </main>
 
-        {/* Sidebar */}
-        <CommentSidebar 
-          threads={threads}
-          activeNewLine={activeNewLine}
-          onCloseNewLine={() => setActiveNewLine(null)}
-          onCreateThread={createThread}
-          onAddReply={addReply}
-          onResolveThread={resolveThread}
-        />
+            {/* Sidebar */}
+            <CommentSidebar 
+              threads={threads}
+              activeNewLine={activeNewLine}
+              onCloseNewLine={() => setActiveNewLine(null)}
+              onCreateThread={createThread}
+              onAddReply={addReply}
+              onResolveThread={resolveThread}
+            />
+          </>
+        )}
       </div>
     </div>
   );
