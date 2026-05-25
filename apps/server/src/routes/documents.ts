@@ -48,13 +48,21 @@ documentsRouter.post("/from-github", authenticate, async (req, res) => {
     return res.status(400).json({ success: false, error: "Missing GitHub parameters" });
   }
 
-  if (!req.user?.githubAccessToken) {
+  let githubToken = req.user?.githubAccessToken;
+  if (!githubToken && req.user?.id) {
+    const userRow = await query("SELECT github_access_token FROM users WHERE id = $1", [req.user.id]);
+    if (userRow.rows.length > 0 && userRow.rows[0].github_access_token) {
+      githubToken = userRow.rows[0].github_access_token;
+    }
+  }
+
+  if (!githubToken) {
     return res.status(403).json({ success: false, error: "GitHub not connected" });
   }
 
   try {
     const [owner, repo] = repoFullName.split("/");
-    const octokit = new (await import("octokit")).Octokit({ auth: req.user.githubAccessToken });
+    const octokit = new (await import("octokit")).Octokit({ auth: githubToken });
 
     // Fetch file content from GitHub
     const response = await octokit.rest.repos.getContent({
@@ -75,7 +83,7 @@ documentsRouter.post("/from-github", authenticate, async (req, res) => {
     const result = await query(
       `INSERT INTO documents (title, owner_id, language, github_repo, github_branch, github_file_path) 
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [title, req.user.id, "plaintext", repoFullName, branch, filePath]
+      [title, req.user!.id, "plaintext", repoFullName, branch, filePath]
     );
 
     // We do NOT seed the Yjs state here in the REST API. 

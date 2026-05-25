@@ -1,16 +1,26 @@
 import { Router } from "express";
 import { Octokit } from "octokit";
 import { authenticate } from "../middleware/auth.js";
+import { query } from "../db/index.js";
 
 export const githubRouter: ReturnType<typeof Router> = Router();
 
 // Middleware to ensure user has connected GitHub
 githubRouter.use(authenticate);
-githubRouter.use((req, res, next) => {
-  if (!req.user || !req.user.githubAccessToken) {
-    return res.status(403).json({ success: false, error: "GitHub account not connected" });
+githubRouter.use(async (req, res, next) => {
+  if (!req.user) {
+    return res.status(403).json({ success: false, error: "Not authenticated" });
   }
-  next();
+  try {
+    const result = await query("SELECT github_access_token FROM users WHERE id = $1", [req.user.id]);
+    if (result.rows.length === 0 || !result.rows[0].github_access_token) {
+      return res.status(403).json({ success: false, error: "GitHub account not connected" });
+    }
+    req.user.githubAccessToken = result.rows[0].github_access_token;
+    next();
+  } catch (err) {
+    return res.status(500).json({ success: false, error: "Database error" });
+  }
 });
 
 // GET /api/github/repos
