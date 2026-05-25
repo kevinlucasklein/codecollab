@@ -73,13 +73,12 @@ documentsRouter.post("/", async (req, res) => {
 // Get document metadata
 // ----------------------------------------------------------------------------
 documentsRouter.get("/:id", async (req, res) => {
-  const userId = req.user!.id;
   const docId = req.params.id;
 
   try {
     const result = await query(
-      "SELECT id, title, owner_id, language, created_at, updated_at FROM documents WHERE id = $1 AND owner_id = $2",
-      [docId, userId]
+      "SELECT id, title, owner_id, language, created_at, updated_at FROM documents WHERE id = $1",
+      [docId]
     );
 
     if (result.rows.length === 0) {
