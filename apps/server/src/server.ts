@@ -17,7 +17,7 @@ const PORT = parseInt(process.env.SERVER_PORT || "3001", 10);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 
 // Express App
-const app = express();
+const app: ReturnType<typeof express> = express();
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(express.json());
 
