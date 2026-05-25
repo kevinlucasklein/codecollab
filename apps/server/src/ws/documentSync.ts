@@ -120,17 +120,17 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
     // Handle disconnect
     // Broadcast new comment thread
     socket.on("comment:thread_created", (docId, thread) => {
-      socket.to(`doc:${docId}`).emit("comment:thread_created", thread);
+      socket.to(docId).emit("comment:thread_created", thread);
     });
 
     // Broadcast new comment reply
     socket.on("comment:added", (docId, comment) => {
-      socket.to(`doc:${docId}`).emit("comment:added", comment);
+      socket.to(docId).emit("comment:added", comment);
     });
 
     // Broadcast thread resolved
     socket.on("comment:resolved", (docId, threadId) => {
-      socket.to(`doc:${docId}`).emit("comment:resolved", threadId);
+      socket.to(docId).emit("comment:resolved", threadId);
     });
 
     socket.on("disconnect", () => {
