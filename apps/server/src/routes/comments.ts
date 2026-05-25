@@ -18,7 +18,7 @@ commentsRouter.get("/", async (req, res) => {
   try {
     // 1. Fetch threads
     const threadsResult = await query(
-      "SELECT id, document_id, line_number, resolved, created_at FROM comment_threads WHERE document_id = $1 ORDER BY created_at ASC",
+      "SELECT id, document_id, line_number, resolved, created_at FROM comment_threads WHERE document_id = $1 AND resolved = FALSE ORDER BY created_at ASC",
       [documentId]
     );
 
