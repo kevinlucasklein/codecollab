@@ -19,6 +19,10 @@ COPY apps/web/ apps/web/
 # Ensure public directory exists
 RUN mkdir -p apps/web/public
 
+# Pass Railway build variables to Next.js
+ARG NEXT_PUBLIC_SERVER_URL
+ENV NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL
+
 # Build shared package first, then web
 RUN pnpm --filter @codecollab/shared build
 RUN pnpm --filter @codecollab/web build
