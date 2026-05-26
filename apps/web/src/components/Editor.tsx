@@ -23,6 +23,7 @@ export function Editor({ ytext, awareness, disabled, filename, onCommentClick }:
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const readOnlyCompartment = useRef(new Compartment());
+  const languageCompartment = useRef(new Compartment());
 
   useEffect(() => {
     if (!editorContainerRef.current) return;
@@ -32,7 +33,7 @@ export function Editor({ ytext, awareness, disabled, filename, onCommentClick }:
     const extensions = [
       basicSetup,
       oneDark,
-      ...languageExtensions,
+      languageCompartment.current.of(languageExtensions),
       yCollab(ytext, awareness),
       readOnlyCompartment.current.of(EditorState.readOnly.of(disabled || false)),
       ...(onCommentClick ? [commentGutterExtension(onCommentClick)] : [])
@@ -56,6 +57,16 @@ export function Editor({ ytext, awareness, disabled, filename, onCommentClick }:
     // Only run once on mount. We DO NOT want to destroy/recreate the editor when `disabled` changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ytext]);
+
+  // Dynamically reconfigure language state when filename prop changes
+  useEffect(() => {
+    if (viewRef.current) {
+      const languageExtensions = filename ? getLanguageExtension(filename) : [];
+      viewRef.current.dispatch({
+        effects: languageCompartment.current.reconfigure(languageExtensions)
+      });
+    }
+  }, [filename]);
 
   // Dynamically reconfigure readOnly state when disabled prop changes
   useEffect(() => {

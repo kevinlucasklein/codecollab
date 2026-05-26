@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import * as Y from "yjs";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Compartment } from "@codemirror/state";
 import { basicSetup } from "codemirror";
 import { yCollab } from "y-codemirror.next";
 import { Awareness } from "y-protocols/awareness";
@@ -21,6 +21,8 @@ interface DiffEditorProps {
 export function DiffEditor({ ytext, awareness, baseContent, filename }: DiffEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<MergeView | null>(null);
+  const languageCompartmentA = useRef(new Compartment());
+  const languageCompartmentB = useRef(new Compartment());
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -34,7 +36,7 @@ export function DiffEditor({ ytext, awareness, baseContent, filename }: DiffEdit
         extensions: [
           basicSetup,
           oneDark,
-          ...languageExtensions,
+          languageCompartmentA.current.of(languageExtensions),
           EditorState.readOnly.of(true)
         ]
       },
@@ -43,7 +45,7 @@ export function DiffEditor({ ytext, awareness, baseContent, filename }: DiffEdit
         extensions: [
           basicSetup,
           oneDark,
-          ...languageExtensions,
+          languageCompartmentB.current.of(languageExtensions),
           yCollab(ytext, awareness)
         ]
       },
@@ -59,6 +61,19 @@ export function DiffEditor({ ytext, awareness, baseContent, filename }: DiffEdit
   }, [ytext, awareness]); 
   // Note: we purposefully do not include baseContent in deps so it doesn't re-render 
   // and destroy the view if something else changes. baseContent is static anyway.
+
+  // Dynamically reconfigure language state when filename prop changes
+  useEffect(() => {
+    if (viewRef.current) {
+      const languageExtensions = filename ? getLanguageExtension(filename) : [];
+      viewRef.current.a.dispatch({
+        effects: languageCompartmentA.current.reconfigure(languageExtensions)
+      });
+      viewRef.current.b.dispatch({
+        effects: languageCompartmentB.current.reconfigure(languageExtensions)
+      });
+    }
+  }, [filename]);
 
   return (
     <div 
