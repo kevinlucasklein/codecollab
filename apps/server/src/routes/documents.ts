@@ -243,7 +243,7 @@ documentsRouter.patch("/:id/review", async (req, res) => {
   const docId = req.params.id;
   const { status } = req.body;
 
-  if (!["pending", "approved", "changes_requested"].includes(status)) {
+  if (!["none", "pending", "approved", "changes_requested"].includes(status)) {
     return res.status(400).json({ success: false, error: "Invalid status" });
   }
 
@@ -253,8 +253,14 @@ documentsRouter.patch("/:id/review", async (req, res) => {
       return res.status(404).json({ success: false, error: "Document not found" });
     }
 
-    if (checkResult.rows[0].owner_id === userId) {
-      return res.status(403).json({ success: false, error: "You cannot review your own document" });
+    const isOwner = checkResult.rows[0].owner_id === userId;
+
+    if (isOwner && ["approved", "changes_requested"].includes(status)) {
+      return res.status(403).json({ success: false, error: "You cannot approve your own document" });
+    }
+
+    if (!isOwner && ["pending", "none"].includes(status)) {
+      return res.status(403).json({ success: false, error: "Only the owner can request or cancel a review" });
     }
 
     await query("UPDATE documents SET review_status = $1, updated_at = NOW() WHERE id = $2", [status, docId]);

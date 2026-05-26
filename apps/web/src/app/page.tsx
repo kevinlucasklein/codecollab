@@ -311,7 +311,7 @@ export default function DashboardPage() {
                           : doc.ownerId === user?.id ? "Created by You" : `Created by ${doc.ownerDisplayName}`}
                       </span>
                       <span>Edited {formatDate(doc.updatedAt)}</span>
-                      {doc.reviewStatus && doc.reviewStatus !== 'pending' && (
+                      {doc.reviewStatus === 'approved' || doc.reviewStatus === 'changes_requested' ? (
                         <span style={{ 
                           color: doc.reviewStatus === 'approved' ? '#4ade80' : '#f87171',
                           fontWeight: 600,
@@ -320,7 +320,7 @@ export default function DashboardPage() {
                         }}>
                           {doc.reviewStatus === 'approved' ? '✅ Approved' : '❌ Changes Requested'}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>

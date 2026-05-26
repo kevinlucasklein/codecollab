@@ -41,7 +41,7 @@ export interface Document {
   githubFilePath?: string;
   baseContent?: string;
   ownerDisplayName?: string;
-  reviewStatus?: 'pending' | 'approved' | 'changes_requested';
+  reviewStatus?: 'none' | 'pending' | 'approved' | 'changes_requested';
 }
 
 export interface CreateDocumentInput {

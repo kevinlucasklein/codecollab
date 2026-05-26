@@ -128,8 +128,8 @@ export default function DocumentPage() {
     };
   }, [socket]);
 
-  const handleReviewStatusChange = async (status: 'approved' | 'changes_requested') => {
-    if (!docMeta || docMeta.ownerId === user?.id) return;
+  const handleReviewStatusChange = async (status: 'none' | 'pending' | 'approved' | 'changes_requested') => {
+    if (!docMeta) return;
     try {
       const res = await fetch(`${SERVER_URL}/api/documents/${docId}/review`, {
         method: "PATCH",
@@ -141,7 +141,9 @@ export default function DocumentPage() {
       });
       if (res.ok) {
         setDocMeta({ ...docMeta, reviewStatus: status });
-        toast.success(`Document marked as ${status === 'approved' ? 'Approved' : 'Changes Requested'}`);
+        if (status === 'pending') toast.success('Review requested!');
+        else if (status === 'none') toast.success('Review cancelled.');
+        else toast.success(`Document marked as ${status === 'approved' ? 'Approved' : 'Changes Requested'}`);
       } else {
         const data = await res.json();
         toast.error(data.error || "Failed to update review status");
@@ -244,54 +246,91 @@ export default function DocumentPage() {
           </span>
 
           {docMeta && (
-            <div className={styles.reviewStatusContainer} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '8px' }}>
-              {docMeta.reviewStatus === 'approved' && (
-                <span style={{ color: '#4ade80', fontSize: '0.8rem', fontWeight: 600 }}>✅ Approved</span>
-              )}
-              {docMeta.reviewStatus === 'changes_requested' && (
-                <span style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: 600 }}>❌ Changes Requested</span>
-              )}
-              {(!docMeta.reviewStatus || docMeta.reviewStatus === 'pending') && (
-                <span style={{ color: '#9ca3af', fontSize: '0.8rem', fontWeight: 600 }}>⏳ Pending Review</span>
-              )}
-              
-              <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
-                <button 
-                  onClick={() => handleReviewStatusChange('approved')}
-                  disabled={docMeta.ownerId === user?.id}
-                  title={docMeta.ownerId === user?.id ? "You cannot approve your own document" : "Approve"}
-                  style={{
-                    background: docMeta.reviewStatus === 'approved' ? 'rgba(74, 222, 128, 0.2)' : 'transparent',
-                    border: '1px solid rgba(74, 222, 128, 0.5)',
-                    color: '#4ade80',
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    cursor: docMeta.ownerId === user?.id ? 'not-allowed' : 'pointer',
-                    opacity: docMeta.ownerId === user?.id ? 0.5 : 1,
-                    fontSize: '0.75rem'
-                  }}
-                >
-                  Approve
-                </button>
-                <button 
-                  onClick={() => handleReviewStatusChange('changes_requested')}
-                  disabled={docMeta.ownerId === user?.id}
-                  title={docMeta.ownerId === user?.id ? "You cannot review your own document" : "Request Changes"}
-                  style={{
-                    background: docMeta.reviewStatus === 'changes_requested' ? 'rgba(248, 113, 113, 0.2)' : 'transparent',
-                    border: '1px solid rgba(248, 113, 113, 0.5)',
-                    color: '#f87171',
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    cursor: docMeta.ownerId === user?.id ? 'not-allowed' : 'pointer',
-                    opacity: docMeta.ownerId === user?.id ? 0.5 : 1,
-                    fontSize: '0.75rem'
-                  }}
-                >
-                  Request Changes
-                </button>
+            docMeta.reviewStatus === 'none' || !docMeta.reviewStatus ? (
+              docMeta.ownerId === user?.id ? (
+                <div style={{ marginLeft: 'auto' }}>
+                  <button 
+                    onClick={() => handleReviewStatusChange('pending')}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'white',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 500
+                    }}
+                  >
+                    Request Review
+                  </button>
+                </div>
+              ) : <div style={{ marginLeft: 'auto' }}></div>
+            ) : (
+              <div className={styles.reviewStatusContainer} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '8px' }}>
+                {docMeta.reviewStatus === 'approved' && (
+                  <span style={{ color: '#4ade80', fontSize: '0.8rem', fontWeight: 600 }}>✅ Approved</span>
+                )}
+                {docMeta.reviewStatus === 'changes_requested' && (
+                  <span style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: 600 }}>❌ Changes Requested</span>
+                )}
+                {docMeta.reviewStatus === 'pending' && (
+                  <span style={{ color: '#9ca3af', fontSize: '0.8rem', fontWeight: 600 }}>⏳ Pending Review</span>
+                )}
+                
+                <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
+                  {docMeta.ownerId === user?.id ? (
+                    <button
+                      onClick={() => handleReviewStatusChange('none')}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        color: '#9ca3af',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      Cancel Review
+                    </button>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleReviewStatusChange('approved')}
+                        title="Approve"
+                        style={{
+                          background: docMeta.reviewStatus === 'approved' ? 'rgba(74, 222, 128, 0.2)' : 'transparent',
+                          border: '1px solid rgba(74, 222, 128, 0.5)',
+                          color: '#4ade80',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        Approve
+                      </button>
+                      <button 
+                        onClick={() => handleReviewStatusChange('changes_requested')}
+                        title="Request Changes"
+                        style={{
+                          background: docMeta.reviewStatus === 'changes_requested' ? 'rgba(248, 113, 113, 0.2)' : 'transparent',
+                          border: '1px solid rgba(248, 113, 113, 0.5)',
+                          color: '#f87171',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        Request Changes
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            )
           )}
 
           {docMeta?.baseContent && (
