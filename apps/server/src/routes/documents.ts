@@ -81,9 +81,9 @@ documentsRouter.post("/from-github", authenticate, async (req, res) => {
 
     // Create the document in DB
     const result = await query(
-      `INSERT INTO documents (title, owner_id, language, github_repo, github_branch, github_file_path) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [title, req.user!.id, "plaintext", repoFullName, branch, filePath]
+      `INSERT INTO documents (title, owner_id, language, github_repo, github_branch, github_file_path, base_content) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [title, req.user!.id, "plaintext", repoFullName, branch, filePath, content]
     );
 
     // We do NOT seed the Yjs state here in the REST API. 
@@ -141,7 +141,7 @@ documentsRouter.get("/:id", async (req, res) => {
 
   try {
     const result = await query(
-      "SELECT id, title, owner_id, language, created_at, updated_at FROM documents WHERE id = $1",
+      "SELECT id, title, owner_id, language, created_at, updated_at, github_repo, github_branch, github_file_path, base_content FROM documents WHERE id = $1",
       [docId]
     );
 
@@ -157,6 +157,10 @@ documentsRouter.get("/:id", async (req, res) => {
       language: row.language,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      githubRepo: row.github_repo,
+      githubBranch: row.github_branch,
+      githubFilePath: row.github_file_path,
+      baseContent: row.base_content,
     };
 
     return res.json({ success: true, data: document });

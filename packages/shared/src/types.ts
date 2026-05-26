@@ -39,6 +39,7 @@ export interface Document {
   githubRepo?: string;
   githubBranch?: string;
   githubFilePath?: string;
+  baseContent?: string;
 }
 
 export interface CreateDocumentInput {
