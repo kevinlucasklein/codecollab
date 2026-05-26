@@ -310,3 +310,25 @@
   color: white;
   font-weight: 500;
 }
+
+/* MergeView overrides to fill the screen */
+.editorContainer :global(.cm-mergeView) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+}
+
+.editorContainer :global(.cm-mergeViewEditors) {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+}
+
+.editorContainer :global(.cm-mergeViewEditor) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
