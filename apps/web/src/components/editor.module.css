@@ -279,3 +279,34 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Diff View Toggle */
+.viewToggle {
+  display: flex;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0 16px;
+}
+
+.toggleButton {
+  background: transparent;
+  border: none;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggleButton:hover {
+  color: var(--color-text);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.toggleButton.active {
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: 500;
+}

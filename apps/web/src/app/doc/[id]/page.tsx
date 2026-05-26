@@ -7,6 +7,7 @@ import { useAuth } from "../../../lib/auth";
 import { useYjsSync } from "../../../hooks/useYjsSync";
 import { useComments } from "../../../hooks/useComments";
 import { Editor } from "../../../components/Editor";
+import { DiffEditor } from "../../../components/DiffEditor";
 import { PresenceBar } from "../../../components/PresenceBar";
 import { CommentSidebar } from "../../../components/CommentSidebar";
 import styles from "../../../components/editor.module.css";
@@ -26,6 +27,9 @@ export default function DocumentPage() {
   
   // Comment UI state
   const [activeNewLine, setActiveNewLine] = useState<number | null>(null);
+
+  // View mode
+  const [viewMode, setViewMode] = useState<"code" | "diff">("code");
 
   // 1. Fetch document metadata
   useEffect(() => {
@@ -119,6 +123,22 @@ export default function DocumentPage() {
               </span>
             )}
           </span>
+          {docMeta?.baseContent && (
+            <div className={styles.viewToggle}>
+              <button 
+                className={`${styles.toggleButton} ${viewMode === "code" ? styles.active : ""}`}
+                onClick={() => setViewMode("code")}
+              >
+                Code
+              </button>
+              <button 
+                className={`${styles.toggleButton} ${viewMode === "diff" ? styles.active : ""}`}
+                onClick={() => setViewMode("diff")}
+              >
+                Diff
+              </button>
+            </div>
+          )}
           <div className={styles.connectionStatus}>
             <div className={`${styles.dot} ${isConnected ? styles.connected : ""}`}></div>
             {isConnected ? (isSynced ? "Synced" : "Syncing...") : "Disconnected"}
@@ -145,13 +165,21 @@ export default function DocumentPage() {
         ) : (
           <>
             {/* Main Editor Area */}
-            <main className={styles.editorWrapper} style={{ flex: 1, minWidth: 0 }}>
-              <Editor 
-                ytext={ytext} 
-                awareness={awareness}
-                disabled={!isConnected || !isSynced} 
-                onCommentClick={(line) => setActiveNewLine(line)}
-              />
+            <main className={styles.editorWrapper} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+              {viewMode === "diff" && docMeta.baseContent ? (
+                <DiffEditor
+                  ytext={ytext}
+                  awareness={awareness}
+                  baseContent={docMeta.baseContent}
+                />
+              ) : (
+                <Editor 
+                  ytext={ytext} 
+                  awareness={awareness}
+                  disabled={!isConnected || !isSynced} 
+                  onCommentClick={(line) => setActiveNewLine(line)}
+                />
+              )}
             </main>
 
             {/* Sidebar */}
