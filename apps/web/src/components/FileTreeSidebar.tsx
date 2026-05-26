@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Folder, FolderOpen, FileText, ChevronRight, ChevronDown } from 'lucide-react';
-import { getFileIcon } from '../lib/fileIcons';
+import { getFileIconMeta } from '../lib/fileIcons';
 import type { Document } from '@codecollab/shared';
 import styles from './fileTreeSidebar.module.css';
 
@@ -42,7 +42,7 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
               parts.pop(); // Remove the file name
               
               let currentPath = repo;
-              parts.forEach(part => {
+              parts.forEach((part: string) => {
                 currentPath += `/${part}`;
                 toExpand.push(currentPath);
               });
@@ -84,7 +84,7 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
         const fileName = parts.pop()!;
         let currentLevel = rootGroups[groupName].children;
         
-        parts.forEach(part => {
+        parts.forEach((part: string) => {
           if (!currentLevel[part]) {
             currentLevel[part] = { type: 'folder', children: {} };
           }
@@ -155,7 +155,7 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
         } else {
           // File
           const doc = node.doc;
-          const { Icon, color } = getFileIcon(doc.language || 'plaintext');
+          const { icon: Icon, color } = getFileIconMeta(doc.githubFilePath || doc.title);
           const isActive = doc.id === currentDocId;
           
           return (
