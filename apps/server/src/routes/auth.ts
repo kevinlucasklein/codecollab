@@ -168,7 +168,7 @@ authRouter.get("/github/callback", async (req, res) => {
       })
     });
 
-    const tokenData = await tokenRes.json();
+    const tokenData: any = await tokenRes.json();
 
     if (tokenData.access_token) {
       // Save to database

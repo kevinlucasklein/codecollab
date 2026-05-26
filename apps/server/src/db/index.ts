@@ -9,8 +9,7 @@ if (!process.env.DATABASE_URL) {
 // Create a connection pool
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // Add SSL config if needed for production (e.g. Neon, Supabase)
-  // ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
 });
 
 // Helper for running single queries

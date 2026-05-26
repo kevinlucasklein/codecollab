@@ -13,7 +13,7 @@ import type {
 } from "@codecollab/shared";
 
 // Config
-const PORT = parseInt(process.env.SERVER_PORT || "3001", 10);
+const PORT = parseInt(process.env.PORT || process.env.SERVER_PORT || "3001", 10);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 
 // Express App
@@ -58,7 +58,7 @@ setupWebSocket(io);
 
 // Start
 if (process.env.NODE_ENV !== "test") {
-  httpServer.listen(PORT, () => {
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`\n🚀 CodeCollab server running on http://localhost:${PORT}`);
     console.log(`   CORS origin: ${CORS_ORIGIN}\n`);
   });

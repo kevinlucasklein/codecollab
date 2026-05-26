@@ -13,7 +13,7 @@ commentsRouter.use(authenticate);
 // Fetch all active comment threads and their comments for a document
 // ----------------------------------------------------------------------------
 commentsRouter.get("/", async (req, res) => {
-  const { documentId } = req.params;
+  const documentId = (req.params as any).documentId;
 
   try {
     // 1. Fetch threads
@@ -72,7 +72,7 @@ commentsRouter.get("/", async (req, res) => {
 // Create a new comment thread and the first comment
 // ----------------------------------------------------------------------------
 commentsRouter.post("/", async (req, res) => {
-  const { documentId } = req.params;
+  const documentId = (req.params as any).documentId;
   const userId = req.user!.id;
   const { lineNumber, content } = req.body;
 
