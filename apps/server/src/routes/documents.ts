@@ -215,6 +215,13 @@ documentsRouter.patch("/:id", async (req, res) => {
       updatedAt: row.updated_at,
     };
 
+    if (title) {
+      const io = req.app.get("io");
+      if (io) {
+        io.to(docId).emit("document:renamed", title);
+      }
+    }
+
     return res.json({ success: true, data: document });
   } catch (error) {
     console.error("Failed to update document:", error);

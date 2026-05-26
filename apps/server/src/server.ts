@@ -56,6 +56,9 @@ import { setupWebSocket } from "./ws/documentSync.js";
 // Wire up Yjs document sync + JWT auth middleware
 setupWebSocket(io);
 
+// Make io accessible in routes
+app.set("io", io);
+
 // Start
 if (process.env.NODE_ENV !== "test") {
   httpServer.listen(PORT, "0.0.0.0", () => {
