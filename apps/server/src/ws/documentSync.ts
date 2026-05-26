@@ -41,7 +41,7 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
     socket.on("doc:join", async (docId, callback) => {
       try {
         // 1. Verify user has access to this doc (in our simple app, anyone with the link and an account can edit)
-        const dbDoc = await query("SELECT id, yjs_state FROM documents WHERE id = $1", [docId]);
+        const dbDoc = await query("SELECT id, yjs_state, base_content FROM documents WHERE id = $1", [docId]);
         if (dbDoc.rows.length === 0) {
           callback({ success: false, error: "Document not found" });
           return;
@@ -59,6 +59,10 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
           // Apply initial state from database if it exists
           if (dbDoc.rows[0].yjs_state) {
             Y.applyUpdate(roomDoc.doc, dbDoc.rows[0].yjs_state);
+          } else if (dbDoc.rows[0].base_content) {
+            // Seed with base content from GitHub import
+            const ytext = roomDoc.doc.getText("monaco");
+            ytext.insert(0, dbDoc.rows[0].base_content);
           }
           
           docs.set(docId, roomDoc);
