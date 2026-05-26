@@ -40,6 +40,7 @@ export interface Document {
   githubBranch?: string;
   githubFilePath?: string;
   baseContent?: string;
+  ownerDisplayName?: string;
 }
 
 export interface CreateDocumentInput {

@@ -200,6 +200,11 @@ export default function DocumentPage() {
                 {docMeta.githubRepo} • {docMeta.githubBranch}
               </span>
             )}
+            {docMeta && (
+              <span style={{ fontSize: '0.8rem', color: '#8b949e', marginLeft: '12px', fontWeight: 'normal' }}>
+                {docMeta.ownerId === user?.id ? "Created by You" : `Created by ${docMeta.ownerDisplayName}`}
+              </span>
+            )}
           </span>
           {docMeta?.baseContent && (
             <div className={styles.viewToggle}>

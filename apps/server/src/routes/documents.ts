@@ -17,7 +17,11 @@ documentsRouter.get("/", async (req, res) => {
 
   try {
     const result = await query(
-      "SELECT id, title, owner_id, language, created_at, updated_at FROM documents WHERE owner_id = $1 ORDER BY updated_at DESC",
+      `SELECT d.id, d.title, d.owner_id, d.language, d.created_at, d.updated_at, u.display_name as owner_display_name
+       FROM documents d
+       JOIN users u ON d.owner_id = u.id
+       WHERE d.owner_id = $1 
+       ORDER BY d.updated_at DESC`,
       [userId]
     );
 
@@ -25,6 +29,7 @@ documentsRouter.get("/", async (req, res) => {
       id: row.id,
       title: row.title,
       ownerId: row.owner_id,
+      ownerDisplayName: row.owner_display_name,
       language: row.language,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -141,7 +146,10 @@ documentsRouter.get("/:id", async (req, res) => {
 
   try {
     const result = await query(
-      "SELECT id, title, owner_id, language, created_at, updated_at, github_repo, github_branch, github_file_path, base_content FROM documents WHERE id = $1",
+      `SELECT d.id, d.title, d.owner_id, d.language, d.created_at, d.updated_at, d.github_repo, d.github_branch, d.github_file_path, d.base_content, u.display_name as owner_display_name
+       FROM documents d
+       JOIN users u ON d.owner_id = u.id
+       WHERE d.id = $1`,
       [docId]
     );
 
@@ -154,6 +162,7 @@ documentsRouter.get("/:id", async (req, res) => {
       id: row.id,
       title: row.title,
       ownerId: row.owner_id,
+      ownerDisplayName: row.owner_display_name,
       language: row.language,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
