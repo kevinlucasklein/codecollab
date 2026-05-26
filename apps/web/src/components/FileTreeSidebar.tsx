@@ -31,11 +31,24 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
         if (data.success) {
           setDocuments(data.data);
           
-          // Auto-expand the folder containing the current document
+          // Auto-expand all folders containing the current document
           const currentDoc = data.data.find((d: Document) => d.id === currentDocId);
           if (currentDoc) {
-            const folderName = currentDoc.githubRepo || 'Local Workspace';
-            setExpandedFolders(prev => new Set([...prev, folderName]));
+            const repo = currentDoc.githubRepo || 'Local Workspace';
+            const toExpand = [repo];
+            
+            if (currentDoc.githubFilePath) {
+              const parts = currentDoc.githubFilePath.split('/');
+              parts.pop(); // Remove the file name
+              
+              let currentPath = repo;
+              parts.forEach(part => {
+                currentPath += `/${part}`;
+                toExpand.push(currentPath);
+              });
+            }
+            
+            setExpandedFolders(prev => new Set([...prev, ...toExpand]));
           }
         }
       } catch (err) {
