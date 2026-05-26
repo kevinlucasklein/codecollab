@@ -202,7 +202,9 @@ export default function DocumentPage() {
             )}
             {docMeta && (
               <span style={{ fontSize: '0.8rem', color: '#8b949e', marginLeft: '12px', fontWeight: 'normal' }}>
-                {docMeta.ownerId === user?.id ? "Created by You" : `Created by ${docMeta.ownerDisplayName}`}
+                {docMeta.githubFilePath 
+                  ? "Imported from GitHub" 
+                  : docMeta.ownerId === user?.id ? "Created by You" : `Created by ${docMeta.ownerDisplayName}`}
               </span>
             )}
           </span>

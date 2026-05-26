@@ -304,7 +304,11 @@ export default function DashboardPage() {
                       )}
                       <span>{meta.displayName}</span>
                       <span>•</span>
-                      <span>{doc.ownerId === user?.id ? "Created by You" : `Created by ${doc.ownerDisplayName}`}</span>
+                      <span>
+                        {doc.githubFilePath 
+                          ? "Imported from GitHub" 
+                          : doc.ownerId === user?.id ? "Created by You" : `Created by ${doc.ownerDisplayName}`}
+                      </span>
                       <span>•</span>
                       <span>Edited {formatDate(doc.updatedAt)}</span>
                     </div>
