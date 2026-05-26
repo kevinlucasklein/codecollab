@@ -28,6 +28,7 @@ FROM node:20-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV HOSTNAME="0.0.0.0"
 
 # Copy the standalone server
 COPY --from=base /app/apps/web/.next/standalone ./
