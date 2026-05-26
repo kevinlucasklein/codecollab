@@ -41,6 +41,7 @@ export interface Document {
   githubFilePath?: string;
   baseContent?: string;
   ownerDisplayName?: string;
+  reviewStatus?: 'pending' | 'approved' | 'changes_requested';
 }
 
 export interface CreateDocumentInput {
@@ -66,6 +67,7 @@ export interface ServerToClientEvents {
   "comment:added": (comment: Comment) => void;
   "comment:resolved": (threadId: string) => void;
   "document:renamed": (newTitle: string) => void;
+  "document:review_updated": (status: string) => void;
 }
 
 export interface ClientToServerEvents {

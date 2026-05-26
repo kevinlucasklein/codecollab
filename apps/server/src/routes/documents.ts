@@ -17,7 +17,7 @@ documentsRouter.get("/", async (req, res) => {
 
   try {
     const result = await query(
-      `SELECT d.id, d.title, d.owner_id, d.language, d.created_at, d.updated_at, d.github_repo, d.github_branch, d.github_file_path, u.display_name as owner_display_name
+      `SELECT d.id, d.title, d.owner_id, d.language, d.review_status, d.created_at, d.updated_at, d.github_repo, d.github_branch, d.github_file_path, u.display_name as owner_display_name
        FROM documents d
        JOIN users u ON d.owner_id = u.id
        WHERE d.owner_id = $1 
@@ -31,6 +31,7 @@ documentsRouter.get("/", async (req, res) => {
       ownerId: row.owner_id,
       ownerDisplayName: row.owner_display_name,
       language: row.language,
+      reviewStatus: row.review_status,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       githubRepo: row.github_repo,
@@ -149,7 +150,7 @@ documentsRouter.get("/:id", async (req, res) => {
 
   try {
     const result = await query(
-      `SELECT d.id, d.title, d.owner_id, d.language, d.created_at, d.updated_at, d.github_repo, d.github_branch, d.github_file_path, d.base_content, u.display_name as owner_display_name
+      `SELECT d.id, d.title, d.owner_id, d.language, d.review_status, d.created_at, d.updated_at, d.github_repo, d.github_branch, d.github_file_path, d.base_content, u.display_name as owner_display_name
        FROM documents d
        JOIN users u ON d.owner_id = u.id
        WHERE d.id = $1`,
@@ -167,6 +168,7 @@ documentsRouter.get("/:id", async (req, res) => {
       ownerId: row.owner_id,
       ownerDisplayName: row.owner_display_name,
       language: row.language,
+      reviewStatus: row.review_status,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       githubRepo: row.github_repo,
@@ -228,6 +230,43 @@ documentsRouter.patch("/:id", async (req, res) => {
     return res.json({ success: true, data: document });
   } catch (error) {
     console.error("Failed to update document:", error);
+    return res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+// ----------------------------------------------------------------------------
+// PATCH /api/documents/:id/review
+// Update document review status
+// ----------------------------------------------------------------------------
+documentsRouter.patch("/:id/review", async (req, res) => {
+  const userId = req.user!.id;
+  const docId = req.params.id;
+  const { status } = req.body;
+
+  if (!["pending", "approved", "changes_requested"].includes(status)) {
+    return res.status(400).json({ success: false, error: "Invalid status" });
+  }
+
+  try {
+    const checkResult = await query("SELECT owner_id FROM documents WHERE id = $1", [docId]);
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "Document not found" });
+    }
+
+    if (checkResult.rows[0].owner_id === userId) {
+      return res.status(403).json({ success: false, error: "You cannot review your own document" });
+    }
+
+    await query("UPDATE documents SET review_status = $1, updated_at = NOW() WHERE id = $2", [status, docId]);
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(docId).emit("document:review_updated", status);
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Failed to update review status:", error);
     return res.status(500).json({ success: false, error: "Internal server error" });
   }
 });

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS documents (
   title       VARCHAR(255) NOT NULL DEFAULT 'Untitled',
   owner_id    UUID REFERENCES users(id) ON DELETE CASCADE,
   language    VARCHAR(50) DEFAULT 'plaintext',
+  review_status VARCHAR(50) DEFAULT 'pending',
   yjs_state   BYTEA,                          -- Yjs document snapshot
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW()

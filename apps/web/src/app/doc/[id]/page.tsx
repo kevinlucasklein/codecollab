@@ -117,6 +117,40 @@ export default function DocumentPage() {
   // 3. Initialize Comments engine
   const { threads, createThread, addReply, resolveThread } = useComments(docId, socket);
 
+  // 3.5. Review Status Socket & Handlers
+  useEffect(() => {
+    if (!socket) return;
+    socket.on("document:review_updated", (status) => {
+      setDocMeta(prev => prev ? { ...prev, reviewStatus: status as any } : null);
+    });
+    return () => {
+      socket.off("document:review_updated");
+    };
+  }, [socket]);
+
+  const handleReviewStatusChange = async (status: 'approved' | 'changes_requested') => {
+    if (!docMeta || docMeta.ownerId === user?.id) return;
+    try {
+      const res = await fetch(`${SERVER_URL}/api/documents/${docId}/review`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setDocMeta({ ...docMeta, reviewStatus: status });
+        toast.success(`Document marked as ${status === 'approved' ? 'Approved' : 'Changes Requested'}`);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to update review status");
+      }
+    } catch (err) {
+      toast.error("Network error");
+    }
+  };
+
   // 4. Handle GitHub Initial Seeding
   useEffect(() => {
     if (isSynced && ytext && ytext.toString() === "") {
@@ -208,6 +242,58 @@ export default function DocumentPage() {
               </span>
             )}
           </span>
+
+          {docMeta && (
+            <div className={styles.reviewStatusContainer} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '8px' }}>
+              {docMeta.reviewStatus === 'approved' && (
+                <span style={{ color: '#4ade80', fontSize: '0.8rem', fontWeight: 600 }}>✅ Approved</span>
+              )}
+              {docMeta.reviewStatus === 'changes_requested' && (
+                <span style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: 600 }}>❌ Changes Requested</span>
+              )}
+              {(!docMeta.reviewStatus || docMeta.reviewStatus === 'pending') && (
+                <span style={{ color: '#9ca3af', fontSize: '0.8rem', fontWeight: 600 }}>⏳ Pending Review</span>
+              )}
+              
+              <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
+                <button 
+                  onClick={() => handleReviewStatusChange('approved')}
+                  disabled={docMeta.ownerId === user?.id}
+                  title={docMeta.ownerId === user?.id ? "You cannot approve your own document" : "Approve"}
+                  style={{
+                    background: docMeta.reviewStatus === 'approved' ? 'rgba(74, 222, 128, 0.2)' : 'transparent',
+                    border: '1px solid rgba(74, 222, 128, 0.5)',
+                    color: '#4ade80',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    cursor: docMeta.ownerId === user?.id ? 'not-allowed' : 'pointer',
+                    opacity: docMeta.ownerId === user?.id ? 0.5 : 1,
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Approve
+                </button>
+                <button 
+                  onClick={() => handleReviewStatusChange('changes_requested')}
+                  disabled={docMeta.ownerId === user?.id}
+                  title={docMeta.ownerId === user?.id ? "You cannot review your own document" : "Request Changes"}
+                  style={{
+                    background: docMeta.reviewStatus === 'changes_requested' ? 'rgba(248, 113, 113, 0.2)' : 'transparent',
+                    border: '1px solid rgba(248, 113, 113, 0.5)',
+                    color: '#f87171',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    cursor: docMeta.ownerId === user?.id ? 'not-allowed' : 'pointer',
+                    opacity: docMeta.ownerId === user?.id ? 0.5 : 1,
+                    fontSize: '0.75rem'
+                  }}
+                >
+                  Request Changes
+                </button>
+              </div>
+            </div>
+          )}
+
           {docMeta?.baseContent && (
             <div className={styles.viewToggle}>
               <button 
