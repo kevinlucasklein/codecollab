@@ -317,6 +317,8 @@
   flex-direction: column;
   flex: 1;
   height: 100%;
+  min-height: 0;
+  min-width: 0;
 }
 
 .editorContainer :global(.cm-mergeViewEditors) {
@@ -324,6 +326,7 @@
   flex: 1;
   height: 100%;
   min-height: 0;
+  min-width: 0;
 }
 
 .editorContainer :global(.cm-mergeViewEditor) {
@@ -331,4 +334,12 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+}
+
+.editorContainer :global(.cm-mergeViewEditor .cm-editor) {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
 }
