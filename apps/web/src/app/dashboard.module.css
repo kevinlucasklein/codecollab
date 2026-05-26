@@ -243,12 +243,37 @@
 .docMeta {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--spacing-xs);
   font-size: 0.8rem;
   line-height: 1.4;
   color: var(--color-text-tertiary);
   font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.repoTag {
+  width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  color: #8b949e;
+}
+
+.metaAuthor {
+  width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.metaType {
+  width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
 }
 
 /* Empty State & Loading */
