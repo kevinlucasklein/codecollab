@@ -244,15 +244,17 @@ export default function DashboardPage() {
                   onClick={() => router.push(`/doc/${doc.id}`)}
                 >
                   <div className={styles.cardActions}>
-                    {!doc.githubFilePath && (
-                      <button 
-                        className={styles.actionButton} 
-                        onClick={(e) => handleRenameStart(e, doc)}
-                        title="Rename"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                    )}
+                    <button 
+                      className={`${styles.actionButton} ${doc.githubFilePath ? styles.disabledActionButton : ""}`} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!doc.githubFilePath) handleRenameStart(e, doc);
+                      }}
+                      title={doc.githubFilePath ? "Cannot rename files imported from GitHub" : "Rename"}
+                      disabled={!!doc.githubFilePath}
+                    >
+                      <Pencil size={16} />
+                    </button>
                     <button 
                       className={styles.actionButton} 
                       onClick={(e) => handleShare(e, doc.id)}

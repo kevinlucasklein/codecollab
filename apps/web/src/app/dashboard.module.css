@@ -179,10 +179,17 @@
   transition: all 0.2s ease;
 }
 
-.actionButton:hover {
+.actionButton:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.15);
   color: var(--color-text-primary);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+.disabledActionButton {
+  opacity: 0.3;
+  cursor: not-allowed;
+  background: transparent;
+  pointer-events: auto; /* To ensure tooltip still shows up */
 }
 
 .dangerButton:hover {
