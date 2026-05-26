@@ -13,6 +13,15 @@ documentsRouter.use(authenticate);
 // GET /api/documents
 // List all documents for the authenticated user
 // ----------------------------------------------------------------------------
+documentsRouter.get("/debug", async (req, res) => {
+  try {
+    const result = await query("SELECT id, title, github_repo, github_file_path FROM documents ORDER BY created_at DESC LIMIT 50");
+    return res.json({ success: true, data: result.rows });
+  } catch (error: any) {
+    return res.json({ success: false, error: error.message });
+  }
+});
+
 documentsRouter.get("/", async (req, res) => {
   const userId = req.user!.id;
 
