@@ -243,8 +243,10 @@
 .docMeta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--spacing-xs);
   font-size: 0.8rem;
+  line-height: 1.4;
   color: var(--color-text-tertiary);
   font-family: var(--font-mono);
 }
