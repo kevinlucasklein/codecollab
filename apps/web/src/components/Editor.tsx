@@ -6,17 +6,20 @@ import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, basicSetup } from "codemirror";
 import { yCollab } from "y-codemirror.next";
 import { Awareness } from "y-protocols/awareness";
+import { oneDark } from "@codemirror/theme-one-dark";
 import { commentGutterExtension } from "./extensions/commentGutter";
+import { getLanguageExtension } from "../lib/languageMatcher";
 import styles from "./editor.module.css";
 
 interface EditorProps {
   ytext: Y.Text;
   awareness: Awareness;
   disabled?: boolean;
+  filename?: string;
   onCommentClick?: (lineNumber: number) => void;
 }
 
-export function Editor({ ytext, awareness, disabled, onCommentClick }: EditorProps) {
+export function Editor({ ytext, awareness, disabled, filename, onCommentClick }: EditorProps) {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const readOnlyCompartment = useRef(new Compartment());
@@ -24,8 +27,12 @@ export function Editor({ ytext, awareness, disabled, onCommentClick }: EditorPro
   useEffect(() => {
     if (!editorContainerRef.current) return;
 
+    const languageExtensions = filename ? getLanguageExtension(filename) : [];
+
     const extensions = [
       basicSetup,
+      oneDark,
+      ...languageExtensions,
       yCollab(ytext, awareness),
       readOnlyCompartment.current.of(EditorState.readOnly.of(disabled || false)),
       ...(onCommentClick ? [commentGutterExtension(onCommentClick)] : [])

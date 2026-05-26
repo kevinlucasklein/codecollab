@@ -7,20 +7,25 @@ import { basicSetup } from "codemirror";
 import { yCollab } from "y-codemirror.next";
 import { Awareness } from "y-protocols/awareness";
 import { MergeView } from "@codemirror/merge";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { getLanguageExtension } from "../lib/languageMatcher";
 import styles from "./editor.module.css";
 
 interface DiffEditorProps {
   ytext: Y.Text;
   awareness: Awareness;
   baseContent: string;
+  filename?: string;
 }
 
-export function DiffEditor({ ytext, awareness, baseContent }: DiffEditorProps) {
+export function DiffEditor({ ytext, awareness, baseContent, filename }: DiffEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<MergeView | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
+
+    const languageExtensions = filename ? getLanguageExtension(filename) : [];
 
     // We only create the MergeView once on mount
     const view = new MergeView({
@@ -28,6 +33,8 @@ export function DiffEditor({ ytext, awareness, baseContent }: DiffEditorProps) {
         doc: baseContent,
         extensions: [
           basicSetup,
+          oneDark,
+          ...languageExtensions,
           EditorState.readOnly.of(true)
         ]
       },
@@ -35,6 +42,8 @@ export function DiffEditor({ ytext, awareness, baseContent }: DiffEditorProps) {
         doc: ytext.toString(),
         extensions: [
           basicSetup,
+          oneDark,
+          ...languageExtensions,
           yCollab(ytext, awareness)
         ]
       },

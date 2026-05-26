@@ -171,12 +171,14 @@ export default function DocumentPage() {
                   ytext={ytext}
                   awareness={awareness}
                   baseContent={docMeta.baseContent}
+                  filename={docMeta.githubFilePath || docMeta.title}
                 />
               ) : (
                 <Editor 
                   ytext={ytext} 
                   awareness={awareness}
                   disabled={!isConnected || !isSynced} 
+                  filename={docMeta.githubFilePath || docMeta.title}
                   onCommentClick={(line) => setActiveNewLine(line)}
                 />
               )}
