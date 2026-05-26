@@ -1,0 +1,144 @@
+.sidebar {
+  width: 250px;
+  min-width: 250px;
+  height: 100%;
+  background: rgba(13, 17, 23, 0.95);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: width 0.3s ease, min-width 0.3s ease, opacity 0.3s ease;
+  font-family: var(--font-sans);
+}
+
+.sidebar.collapsed {
+  width: 0;
+  min-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  border-right: none;
+}
+
+.header {
+  padding: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.treeContainer {
+  flex: 1;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+/* Custom thin scrollbar */
+.treeContainer::-webkit-scrollbar {
+  width: 6px;
+}
+.treeContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+.treeContainer::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.treeContainer::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.folder {
+  margin-bottom: 4px;
+}
+
+.folderHeader {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  user-select: none;
+  transition: background 0.1s ease;
+}
+
+.folderHeader:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.folderIcon {
+  margin-right: 8px;
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+}
+
+.folderName {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileList {
+  padding-left: 20px;
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px 6px 24px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  text-decoration: none;
+  user-select: none;
+  transition: all 0.1s ease;
+  position: relative;
+}
+
+.fileItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary);
+}
+
+.fileItem.active {
+  background: rgba(108, 99, 255, 0.1);
+  color: var(--color-accent);
+}
+
+.fileItem.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-accent);
+}
+
+.fileIcon {
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.fileName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.loading {
+  padding: 16px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: 0.8rem;
+}

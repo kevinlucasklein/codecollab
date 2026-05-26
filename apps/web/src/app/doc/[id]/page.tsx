@@ -10,6 +10,8 @@ import { Editor } from "../../../components/Editor";
 import { DiffEditor } from "../../../components/DiffEditor";
 import { PresenceBar } from "../../../components/PresenceBar";
 import { CommentSidebar } from "../../../components/CommentSidebar";
+import { FileTreeSidebar } from "../../../components/FileTreeSidebar";
+import { Sidebar } from "lucide-react";
 import styles from "../../../components/editor.module.css";
 import type { Document } from "@codecollab/shared";
 import toast from "react-hot-toast";
@@ -25,15 +27,12 @@ export default function DocumentPage() {
   const [docMeta, setDocMeta] = useState<Document | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   
-  // Comment UI state
+  // UI State
   const [activeNewLine, setActiveNewLine] = useState<number | null>(null);
-
-  // View mode
-  const [viewMode, setViewMode] = useState<"code" | "diff">("code");
-
-  // Title Editing State
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState("");
+  const [viewMode, setViewMode] = useState<"code" | "diff">("code");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // 1. Fetch document metadata
   useEffect(() => {
@@ -204,6 +203,18 @@ export default function DocumentPage() {
           <Link href="/" className={styles.backButton} title="Back to Dashboard">
             ←
           </Link>
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={styles.sidebarToggleBtn}
+            style={{ 
+              background: 'transparent', border: 'none', color: 'var(--color-text-secondary)', 
+              cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center',
+              marginRight: '12px', borderRadius: '4px'
+            }}
+            title="Toggle File Explorer"
+          >
+            <Sidebar size={18} />
+          </button>
           <span className={styles.docTitle} style={{ display: 'flex', alignItems: 'center' }}>
             {docMeta ? (
               isEditingTitle ? (
@@ -364,6 +375,7 @@ export default function DocumentPage() {
 
       {/* Main Content Area */}
       <div className={styles.mainContent} style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <FileTreeSidebar currentDocId={docId} isOpen={isSidebarOpen} />
         {!docMeta ? (
           <div className={styles.skeletonWrapper}>
             <div className={styles.skeletonLine} style={{ width: '60%' }}></div>
