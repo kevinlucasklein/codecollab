@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import type { Document } from "@codecollab/shared";
 import { getFileIconMeta } from "../lib/fileIcons";
+import { Pencil, Share2, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 import styles from "./dashboard.module.css";
 
 import RepoBrowser from "../components/RepoBrowser";
@@ -19,6 +21,8 @@ export default function DashboardPage() {
   const [isFetching, setIsFetching] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [showRepoBrowser, setShowRepoBrowser] = useState(false);
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -76,6 +80,73 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Failed to create document:", error);
       setIsCreating(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, docId: string) => {
+    e.stopPropagation();
+    if (!token) return;
+    if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) return;
+
+    try {
+      const res = await fetch(`${SERVER_URL}/api/documents/${docId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setDocuments(documents.filter(d => d.id !== docId));
+        toast.success("Document deleted");
+      } else {
+        toast.error("Failed to delete document");
+      }
+    } catch (err) {
+      toast.error("Network error");
+    }
+  };
+
+  const handleShare = (e: React.MouseEvent, docId: string) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/doc/${docId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Share link copied to clipboard!");
+  };
+
+  const handleRenameStart = (e: React.MouseEvent, doc: Document) => {
+    e.stopPropagation();
+    if (doc.githubFilePath) return; // Cannot rename GitHub docs
+    setEditingDocId(doc.id);
+    setEditingTitle(doc.title);
+  };
+
+  const handleRenameSave = async (e: React.FocusEvent | React.KeyboardEvent, docId: string) => {
+    e.stopPropagation();
+    if (!token) return;
+    
+    setEditingDocId(null);
+    const newTitle = editingTitle.trim();
+    const doc = documents.find(d => d.id === docId);
+    if (!doc || !newTitle || newTitle === doc.title) return;
+
+    // Optimistic update
+    setDocuments(documents.map(d => d.id === docId ? { ...d, title: newTitle } : d));
+
+    try {
+      const res = await fetch(`${SERVER_URL}/api/documents/${docId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (!res.ok) {
+        // Revert
+        setDocuments(documents.map(d => d.id === docId ? { ...d, title: doc.title } : d));
+        toast.error("Failed to rename document");
+      }
+    } catch (err) {
+      setDocuments(documents.map(d => d.id === docId ? { ...d, title: doc.title } : d));
+      toast.error("Network error");
     }
   };
 
@@ -172,6 +243,32 @@ export default function DashboardPage() {
                   className={styles.docCard}
                   onClick={() => router.push(`/doc/${doc.id}`)}
                 >
+                  <div className={styles.cardActions}>
+                    {!doc.githubFilePath && (
+                      <button 
+                        className={styles.actionButton} 
+                        onClick={(e) => handleRenameStart(e, doc)}
+                        title="Rename"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    )}
+                    <button 
+                      className={styles.actionButton} 
+                      onClick={(e) => handleShare(e, doc.id)}
+                      title="Share link"
+                    >
+                      <Share2 size={16} />
+                    </button>
+                    <button 
+                      className={`${styles.actionButton} ${styles.dangerButton}`} 
+                      onClick={(e) => handleDelete(e, doc.id)}
+                      title="Delete document"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
                   <div className={styles.docIcon} style={{ 
                     color: meta.color, 
                     backgroundColor: `${meta.color}15`, 
@@ -180,7 +277,20 @@ export default function DashboardPage() {
                     <Icon size={24} />
                   </div>
                   <div className={styles.docInfo}>
-                    <h3 className={styles.docTitle}>{doc.title}</h3>
+                    {editingDocId === doc.id ? (
+                      <input
+                        type="text"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onBlur={(e) => handleRenameSave(e, doc.id)}
+                        onKeyDown={(e) => e.key === "Enter" && handleRenameSave(e, doc.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        autoFocus
+                        className={styles.dashboardTitleInput}
+                      />
+                    ) : (
+                      <h3 className={styles.docTitle}>{doc.title}</h3>
+                    )}
                     <div className={styles.docMeta}>
                       {doc.githubRepo && (
                         <span style={{ color: "#8b949e", marginRight: "8px" }}>
