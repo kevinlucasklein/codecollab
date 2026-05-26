@@ -17,7 +17,7 @@ documentsRouter.get("/", async (req, res) => {
 
   try {
     const result = await query(
-      `SELECT d.id, d.title, d.owner_id, d.language, d.created_at, d.updated_at, u.display_name as owner_display_name
+      `SELECT d.id, d.title, d.owner_id, d.language, d.created_at, d.updated_at, d.github_repo, d.github_branch, d.github_file_path, u.display_name as owner_display_name
        FROM documents d
        JOIN users u ON d.owner_id = u.id
        WHERE d.owner_id = $1 
@@ -33,6 +33,9 @@ documentsRouter.get("/", async (req, res) => {
       language: row.language,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      githubRepo: row.github_repo,
+      githubBranch: row.github_branch,
+      githubFilePath: row.github_file_path,
     }));
 
     return res.json({ success: true, data: documents });
