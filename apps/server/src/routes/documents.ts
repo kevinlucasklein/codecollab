@@ -2,6 +2,7 @@ import { Router } from "express";
 import { pool, query } from "../db/index.js";
 import { authenticate } from "../middleware/auth.js";
 import type { Document } from "@codecollab/shared";
+import { Octokit } from "octokit";
 
 export const documentsRouter: ReturnType<typeof Router> = Router();
 
@@ -71,7 +72,7 @@ documentsRouter.post("/from-github", authenticate, async (req, res) => {
 
   try {
     const [owner, repo] = repoFullName.split("/");
-    const octokit = new (await import("octokit")).Octokit({ auth: githubToken });
+    const octokit = new Octokit({ auth: githubToken });
 
     // Fetch file content from GitHub
     const response = await octokit.rest.repos.getContent({
