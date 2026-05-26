@@ -136,6 +136,12 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
       socket.to(docId).emit("comment:resolved", threadId);
     });
 
+    // Broadcast document renamed
+    socket.on("document:renamed", (docId, newTitle) => {
+      console.log(`[WS] document:renamed received for doc ${docId}, new title: ${newTitle}, broadcasting...`);
+      socket.to(docId).emit("document:renamed", newTitle);
+    });
+
     socket.on("disconnect", () => {
       console.log(`User disconnected: ${user.displayName} (${socket.id})`);
       // User could be in multiple rooms, find all

@@ -42,6 +42,30 @@
   color: var(--color-text-primary);
 }
 
+.editableTitleHover {
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.editableTitleHover:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-border);
+}
+
+.titleInput {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+  min-width: 200px;
+}
+
 .connectionStatus {
   display: flex;
   align-items: center;

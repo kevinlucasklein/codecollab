@@ -31,6 +31,10 @@ export default function DocumentPage() {
   // View mode
   const [viewMode, setViewMode] = useState<"code" | "diff">("code");
 
+  // Title Editing State
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState("");
+
   // 1. Fetch document metadata
   useEffect(() => {
     if (!token || !docId) return;
@@ -57,6 +61,58 @@ export default function DocumentPage() {
 
   // 2. Initialize Yjs + Socket.io sync engine
   const { doc, ytext, awareness, isConnected, isSynced, error: syncError, activeUsers, socket } = useYjsSync(docId);
+
+  // 3. Listen for WebSocket title updates
+  useEffect(() => {
+    if (!socket) return;
+    const handleRenamed = (newTitle: string) => {
+      setDocMeta(prev => prev ? { ...prev, title: newTitle } : prev);
+    };
+    socket.on("document:renamed", handleRenamed);
+    return () => {
+      socket.off("document:renamed", handleRenamed);
+    };
+  }, [socket]);
+
+  const handleTitleClick = () => {
+    if (!docMeta || docMeta.githubFilePath) return; // Cannot edit GitHub docs
+    setEditTitleValue(docMeta.title);
+    setIsEditingTitle(true);
+  };
+
+  const handleTitleSave = async () => {
+    setIsEditingTitle(false);
+    if (!docMeta || !editTitleValue.trim() || editTitleValue === docMeta.title) return;
+
+    const oldTitle = docMeta.title;
+    const newTitle = editTitleValue.trim();
+
+    // Optimistically update
+    setDocMeta({ ...docMeta, title: newTitle });
+
+    try {
+      const res = await fetch(`${SERVER_URL}/api/documents/${docId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
+
+      if (res.ok && socket) {
+        // Broadcast the rename to other users!
+        socket.emit("document:renamed", docId, newTitle);
+      } else {
+        // Revert on error
+        setDocMeta({ ...docMeta, title: oldTitle });
+        toast.error("Failed to rename document");
+      }
+    } catch (err) {
+      setDocMeta({ ...docMeta, title: oldTitle });
+      toast.error("Network error while renaming");
+    }
+  };
 
   // 3. Initialize Comments engine
   const { threads, createThread, addReply, resolveThread } = useComments(docId, socket);
@@ -113,7 +169,29 @@ export default function DocumentPage() {
             ←
           </Link>
           <span className={styles.docTitle} style={{ display: 'flex', alignItems: 'center' }}>
-            {docMeta ? docMeta.title : "Loading document..."}
+            {docMeta ? (
+              isEditingTitle ? (
+                <input
+                  type="text"
+                  value={editTitleValue}
+                  onChange={(e) => setEditTitleValue(e.target.value)}
+                  onBlur={handleTitleSave}
+                  onKeyDown={(e) => e.key === "Enter" && handleTitleSave()}
+                  autoFocus
+                  className={styles.titleInput}
+                />
+              ) : (
+                <span 
+                  onClick={handleTitleClick} 
+                  style={{ cursor: docMeta.githubFilePath ? "default" : "pointer" }}
+                  className={!docMeta.githubFilePath ? styles.editableTitleHover : ""}
+                >
+                  {docMeta.title}
+                </span>
+              )
+            ) : (
+              "Loading document..."
+            )}
             {docMeta?.githubRepo && (
               <span style={{ fontSize: '0.8rem', color: '#8b949e', marginLeft: '12px', fontWeight: 'normal', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '12px' }}>
                 <svg height="12" width="12" viewBox="0 0 16 16" fill="currentColor" style={{ verticalAlign: "middle", marginRight: "4px", marginBottom: "2px" }}>

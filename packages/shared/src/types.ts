@@ -64,6 +64,7 @@ export interface ServerToClientEvents {
   "comment:thread_created": (thread: CommentThread) => void;
   "comment:added": (comment: Comment) => void;
   "comment:resolved": (threadId: string) => void;
+  "document:renamed": (newTitle: string) => void;
 }
 
 export interface ClientToServerEvents {
@@ -74,6 +75,7 @@ export interface ClientToServerEvents {
   "comment:thread_created": (docId: string, thread: CommentThread) => void;
   "comment:added": (docId: string, comment: Comment) => void;
   "comment:resolved": (docId: string, threadId: string) => void;
+  "document:renamed": (docId: string, newTitle: string) => void;
 }
 
 // Presence
