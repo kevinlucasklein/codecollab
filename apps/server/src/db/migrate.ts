@@ -11,7 +11,10 @@ async function migrate() {
   const client = await pool.connect();
   
   try {
-    const schemaPath = path.join(__dirname, "schema.sql");
+    let schemaPath = path.join(__dirname, "schema.sql");
+    if (!fs.existsSync(schemaPath)) {
+      schemaPath = path.join(__dirname, "../../src/db/schema.sql");
+    }
     const schemaSql = fs.readFileSync(schemaPath, "utf-8");
 
     console.log("Executing schema.sql...");
