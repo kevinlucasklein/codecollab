@@ -11,6 +11,7 @@ import { DiffEditor } from "../../../components/DiffEditor";
 import { PresenceBar } from "../../../components/PresenceBar";
 import { CommentSidebar } from "../../../components/CommentSidebar";
 import { FileTreeSidebar } from "../../../components/FileTreeSidebar";
+import { ShareDialog } from "../../../components/ShareDialog";
 import type { FolderContext } from "../../../lib/folderLink";
 import { Sidebar } from "lucide-react";
 import styles from "../../../components/editor.module.css";
@@ -50,6 +51,7 @@ export default function DocumentPage() {
   const [editTitleValue, setEditTitleValue] = useState("");
   const [viewMode, setViewMode] = useState<"code" | "diff">("code");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   // 1. Fetch document metadata.
   // Show any cached metadata for this file immediately (no skeleton flash on
@@ -216,9 +218,14 @@ export default function DocumentPage() {
     );
   }
 
-  const copyShareLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast.success("Share link copied to clipboard!");
+  const handleShareClick = () => {
+    // Owners get the full manage-access dialog; everyone else just copies a link.
+    if (docMeta?.access === "owner") {
+      setIsShareOpen(true);
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Share link copied to clipboard!");
+    }
   };
 
   return (
@@ -386,11 +393,16 @@ export default function DocumentPage() {
               </button>
             </div>
           )}
+          {docMeta?.access === "viewer" && (
+            <span style={{ fontSize: "0.8rem", color: "#fbbf24", fontWeight: 600, background: "rgba(251,191,36,0.12)", padding: "2px 10px", borderRadius: "12px" }}>
+              View only
+            </span>
+          )}
           <div className={styles.connectionStatus}>
             <div className={`${styles.dot} ${isConnected ? styles.connected : ""}`}></div>
             {isConnected ? (isSynced ? "Synced" : "Syncing...") : "Disconnected"}
           </div>
-          <button onClick={copyShareLink} className={styles.shareButton}>
+          <button onClick={handleShareClick} className={styles.shareButton}>
             Share
           </button>
         </div>
@@ -422,10 +434,10 @@ export default function DocumentPage() {
                   filename={docMeta.githubFilePath || docMeta.title}
                 />
               ) : (
-                <Editor 
-                  ytext={ytext} 
+                <Editor
+                  ytext={ytext}
                   awareness={awareness}
-                  disabled={!isConnected || !isSynced} 
+                  disabled={!isConnected || !isSynced || docMeta.access === "viewer"}
                   filename={docMeta.githubFilePath || docMeta.title}
                   onCommentClick={(line) => setActiveNewLine(line)}
                 />
@@ -444,6 +456,14 @@ export default function DocumentPage() {
           </>
         )}
       </div>
+
+      {isShareOpen && docMeta && (
+        <ShareDialog
+          target={{ kind: "file", docId: docId, title: docMeta.title }}
+          shareLink={`${window.location.origin}/doc/${docId}`}
+          onClose={() => setIsShareOpen(false)}
+        />
+      )}
     </div>
   );
 }

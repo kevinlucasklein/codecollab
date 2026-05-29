@@ -278,6 +278,15 @@
   display: inline-block;
 }
 
+/* Section heading (e.g. "Shared with me") */
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: var(--spacing-2xl) 0 var(--spacing-lg);
+  color: var(--color-text-primary);
+}
+
 /* Folder cards */
 .folderCard {
   align-items: flex-start;

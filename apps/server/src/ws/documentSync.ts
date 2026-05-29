@@ -16,6 +16,33 @@ const docs = new Map<string, {
 
 const SAVE_DEBOUNCE_MS = 2000;
 
+type AccessRole = "owner" | "editor" | "viewer" | "none";
+
+// Resolve a user's access role for a document: owner, an explicit file/folder
+// share permission, or "none" for link-only access.
+async function getAccessRole(docId: string, userId: string): Promise<AccessRole> {
+  const docRes = await query(
+    "SELECT owner_id, github_repo, github_branch FROM documents WHERE id = $1",
+    [docId]
+  );
+  if (docRes.rows.length === 0) return "none";
+
+  const row = docRes.rows[0];
+  if (row.owner_id === userId) return "owner";
+
+  const shareRes = await query(
+    `SELECT permission FROM document_shares WHERE document_id = $1 AND shared_with = $2
+     UNION
+     SELECT permission FROM folder_shares
+       WHERE owner_id = $3 AND github_repo = $4 AND github_branch = COALESCE($5, '') AND shared_with = $2`,
+    [docId, userId, row.owner_id, row.github_repo, row.github_branch]
+  );
+
+  if (shareRes.rows.some((r) => r.permission === "editor")) return "editor";
+  if (shareRes.rows.some((r) => r.permission === "viewer")) return "viewer";
+  return "none";
+}
+
 export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEvents>) {
   // Middleware: Authenticate socket connection
   io.use((socket, next) => {
@@ -70,6 +97,13 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
 
         roomDoc.connections++;
 
+        // 2b. Resolve and remember this user's access role for the room, so we
+        // can enforce read-only (viewer) access on incoming edits.
+        const role = await getAccessRole(docId, user.id);
+        const data = socket.data as any;
+        data.roles = data.roles || {};
+        data.roles[docId] = role;
+
         // 3. Join the socket.io room
         socket.join(docId);
 
@@ -94,6 +128,14 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
     socket.on("sync:update", (docId, updateBuffer) => {
       const roomDoc = docs.get(docId);
       if (!roomDoc) return;
+
+      // Hard enforcement: viewers cannot modify the document. We drop their
+      // edits server-side regardless of what their client does. Owners,
+      // editors, and link-only collaborators may edit.
+      const role = (socket.data as any).roles?.[docId] as AccessRole | undefined;
+      if (role === "viewer") {
+        return;
+      }
 
       // Ensure updateBuffer is Uint8Array (socket.io might send it as a Buffer in Node)
       const update = new Uint8Array(updateBuffer);

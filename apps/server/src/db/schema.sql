@@ -55,3 +55,33 @@ ADD COLUMN IF NOT EXISTS github_branch VARCHAR(255),
 ADD COLUMN IF NOT EXISTS github_file_path VARCHAR(255),
 ADD COLUMN IF NOT EXISTS base_content TEXT,
 ADD COLUMN IF NOT EXISTS review_status VARCHAR(50) DEFAULT 'none';
+
+-- Layer 5: Persistent Sharing (grant/revoke access, OneDrive/Box style)
+
+-- Per-document shares
+CREATE TABLE IF NOT EXISTS document_shares (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  shared_with UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  permission  VARCHAR(10) NOT NULL DEFAULT 'editor', -- 'viewer' | 'editor'
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (document_id, shared_with)
+);
+
+CREATE INDEX IF NOT EXISTS idx_document_shares_shared_with ON document_shares(shared_with);
+CREATE INDEX IF NOT EXISTS idx_document_shares_document_id ON document_shares(document_id);
+
+-- Per-folder (repo+branch) shares. A folder share grants access to ALL of the
+-- owner's documents in that repo+branch, including ones imported later.
+CREATE TABLE IF NOT EXISTS folder_shares (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  github_repo   VARCHAR(255) NOT NULL,
+  github_branch VARCHAR(255) NOT NULL DEFAULT '',
+  shared_with   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  permission    VARCHAR(10) NOT NULL DEFAULT 'editor', -- 'viewer' | 'editor'
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (owner_id, github_repo, github_branch, shared_with)
+);
+
+CREATE INDEX IF NOT EXISTS idx_folder_shares_shared_with ON folder_shares(shared_with);

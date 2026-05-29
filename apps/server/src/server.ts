@@ -30,12 +30,14 @@ import { authRouter } from "./routes/auth.js";
 import { documentsRouter } from "./routes/documents.js";
 import { commentsRouter } from "./routes/comments.js";
 import { githubRouter } from "./routes/github.js";
+import { foldersRouter } from "./routes/folders.js";
 
 // --- API Routes ---
 app.use("/api/auth", authRouter);
 app.use("/api/documents", documentsRouter);
 app.use("/api/documents/:documentId/comments", commentsRouter);
 app.use("/api/github", githubRouter);
+app.use("/api/folders", foldersRouter);
 
 // HTTP Server
 const httpServer = http.createServer(app);

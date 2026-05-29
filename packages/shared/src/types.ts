@@ -29,6 +29,9 @@ export interface LoginInput {
 
 // Documents
 
+export type AccessRole = 'owner' | 'editor' | 'viewer';
+export type SharePermission = 'viewer' | 'editor';
+
 export interface Document {
   id: string;
   title: string;
@@ -42,6 +45,17 @@ export interface Document {
   baseContent?: string;
   ownerDisplayName?: string;
   reviewStatus?: 'none' | 'pending' | 'approved' | 'changes_requested';
+  // The current user's access to this document. 'owner' for documents they own,
+  // otherwise the permission granted via a file or folder share.
+  access?: AccessRole;
+}
+
+// A single grant of access to a file or folder.
+export interface ShareEntry {
+  userId: string;
+  email: string;
+  displayName: string;
+  permission: SharePermission;
 }
 
 export interface CreateDocumentInput {
