@@ -21,6 +21,9 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
   const [isLoading, setIsLoading] = useState(true);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['Local Workspace']));
 
+  // Fetch the document list once per session (re-runs only if the token changes).
+  // Keeping this independent of currentDocId means switching files via the sidebar
+  // won't refetch or flash the tree back to a loading state.
   useEffect(() => {
     if (!token) return;
     const fetchDocuments = async () => {
@@ -33,26 +36,6 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
         const data = await res.json();
         if (data.success) {
           setDocuments(data.data);
-          
-          // Auto-expand all folders containing the current document
-          const currentDoc = data.data.find((d: Document) => d.id === currentDocId);
-          if (currentDoc) {
-            const repo = currentDoc.githubRepo || 'Local Workspace';
-            const toExpand = [repo];
-            
-            if (currentDoc.githubFilePath) {
-              const parts = currentDoc.githubFilePath.split('/');
-              parts.pop(); // Remove the file name
-              
-              let currentPath = repo;
-              parts.forEach((part: string) => {
-                currentPath += `/${part}`;
-                toExpand.push(currentPath);
-              });
-            }
-            
-            setExpandedFolders(prev => new Set([...prev, ...toExpand]));
-          }
         }
       } catch (err) {
         console.error("Failed to fetch documents for sidebar", err);
@@ -62,7 +45,31 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
     };
 
     fetchDocuments();
-  }, [currentDocId, token]);
+  }, [token]);
+
+  // Auto-expand the folders leading to the currently open document.
+  // Runs whenever the selection or the loaded document list changes, without
+  // triggering a network request.
+  useEffect(() => {
+    const currentDoc = documents.find((d) => d.id === currentDocId);
+    if (!currentDoc) return;
+
+    const repo = currentDoc.githubRepo || 'Local Workspace';
+    const toExpand = [repo];
+
+    if (currentDoc.githubFilePath) {
+      const parts = currentDoc.githubFilePath.split('/');
+      parts.pop(); // Remove the file name
+
+      let currentPath = repo;
+      parts.forEach((part: string) => {
+        currentPath += `/${part}`;
+        toExpand.push(currentPath);
+      });
+    }
+
+    setExpandedFolders((prev) => new Set([...prev, ...toExpand]));
+  }, [currentDocId, documents]);
 
   // Group documents by repository first, then build a nested tree
   const tree = useMemo(() => {
