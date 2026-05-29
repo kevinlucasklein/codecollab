@@ -15,7 +15,7 @@ import { ShareDialog } from "../../../components/ShareDialog";
 import type { FolderContext } from "../../../lib/folderLink";
 import { Sidebar } from "lucide-react";
 import styles from "../../../components/editor.module.css";
-import type { Document } from "@codecollab/shared";
+import type { Document, PresenceUser, FolderPresenceEntry } from "@codecollab/shared";
 import toast from "react-hot-toast";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
@@ -52,6 +52,8 @@ export default function DocumentPage() {
   const [viewMode, setViewMode] = useState<"code" | "diff">("code");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  // Map of docId -> collaborators currently on that file (within the folder).
+  const [folderPresence, setFolderPresence] = useState<Map<string, PresenceUser[]>>(new Map());
 
   // 1. Fetch document metadata.
   // Show any cached metadata for this file immediately (no skeleton flash on
@@ -88,6 +90,46 @@ export default function DocumentPage() {
 
   // 2. Initialize Yjs + Socket.io sync engine
   const { doc, ytext, awareness, isConnected, isSynced, error: syncError, activeUsers, socket } = useYjsSync(docId);
+
+  // 2b. Folder presence — subscribe to where others in the folder are working.
+  // Leaving only happens when we exit the folder or unmount, not on file switch.
+  useEffect(() => {
+    if (!socket || !folderContext) {
+      setFolderPresence(new Map());
+      return;
+    }
+    const folderKey = `${folderContext.uid}|${folderContext.repo}|${folderContext.branch}`;
+
+    const handleFolderPresence = (entries: FolderPresenceEntry[]) => {
+      const byDoc = new Map<string, PresenceUser[]>();
+      for (const e of entries) {
+        if (e.userId === user?.id) continue; // don't show ourselves
+        const list = byDoc.get(e.docId) ?? [];
+        list.push({ id: e.userId, displayName: e.displayName, color: e.color });
+        byDoc.set(e.docId, list);
+      }
+      setFolderPresence(byDoc);
+    };
+
+    socket.on("folder:presence", handleFolderPresence);
+    return () => {
+      socket.off("folder:presence", handleFolderPresence);
+      socket.emit("folder:leave", folderKey);
+    };
+  }, [socket, folderContext, user?.id]);
+
+  // 2c. Announce the file we're currently on within the folder. Re-runs on file
+  // switch; the server updates our location in place (no leave/rejoin churn).
+  useEffect(() => {
+    if (!socket || !folderContext) return;
+    const folderKey = `${folderContext.uid}|${folderContext.repo}|${folderContext.branch}`;
+    const announce = () => socket.emit("folder:join", folderKey, docId);
+    if (socket.connected) announce();
+    socket.on("connect", announce);
+    return () => {
+      socket.off("connect", announce);
+    };
+  }, [socket, folderContext, docId]);
 
   // 3. Listen for WebSocket title updates
   useEffect(() => {
@@ -413,7 +455,7 @@ export default function DocumentPage() {
 
       {/* Main Content Area */}
       <div className={styles.mainContent} style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <FileTreeSidebar currentDocId={docId} isOpen={isSidebarOpen} folderContext={folderContext} />
+        <FileTreeSidebar currentDocId={docId} isOpen={isSidebarOpen} folderContext={folderContext} presenceByDoc={folderPresence} />
         {!docMeta ? (
           <div className={styles.skeletonWrapper}>
             <div className={styles.skeletonLine} style={{ width: '60%' }}></div>

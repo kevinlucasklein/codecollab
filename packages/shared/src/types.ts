@@ -84,6 +84,16 @@ export interface ServerToClientEvents {
   "document:review_updated": (status: string) => void;
   // Authoritative, deduped list of users currently in the document room.
   "presence:update": (users: PresenceUser[]) => void;
+  // Who is currently on which file within a shared folder.
+  "folder:presence": (entries: FolderPresenceEntry[]) => void;
+}
+
+// One collaborator's current location within a folder.
+export interface FolderPresenceEntry {
+  userId: string;
+  displayName: string;
+  color: string;
+  docId: string;
 }
 
 export interface ClientToServerEvents {
@@ -95,6 +105,10 @@ export interface ClientToServerEvents {
   "comment:added": (docId: string, comment: Comment) => void;
   "comment:resolved": (docId: string, threadId: string) => void;
   "document:renamed": (docId: string, newTitle: string) => void;
+  // Announce / clear which file the user is on within a folder.
+  // folderKey is `${ownerId}|${repo}|${branch}`.
+  "folder:join": (folderKey: string, docId: string) => void;
+  "folder:leave": (folderKey: string) => void;
 }
 
 // Presence

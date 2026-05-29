@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 import * as Y from "yjs";
 import jwt from "jsonwebtoken";
 import { pool, query } from "../db/index.js";
-import type { ClientToServerEvents, ServerToClientEvents, User, PresenceUser } from "@codecollab/shared";
+import type { ClientToServerEvents, ServerToClientEvents, User, PresenceUser, FolderPresenceEntry } from "@codecollab/shared";
 
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production-use-a-long-random-string";
 
@@ -44,6 +44,29 @@ function buildPresence(docId: string): PresenceUser[] {
 
 function emitPresence(io: Server<ClientToServerEvents, ServerToClientEvents>, docId: string) {
   io.to(docId).emit("presence:update", buildPresence(docId));
+}
+
+// Folder presence: within a shared folder, who is currently on which file.
+// Keyed: folderKey -> (socketId -> { user, docId }).
+const folderPresence = new Map<string, Map<string, { user: User; docId: string }>>();
+
+function folderRoom(folderKey: string): string {
+  return `folder:${folderKey}`;
+}
+
+function buildFolderPresence(folderKey: string): FolderPresenceEntry[] {
+  const members = folderPresence.get(folderKey);
+  if (!members) return [];
+  // Dedupe by user id (last write wins) so one person shows on one file.
+  const byUser = new Map<string, FolderPresenceEntry>();
+  for (const { user, docId } of members.values()) {
+    byUser.set(user.id, { userId: user.id, displayName: user.displayName, color: getUserColor(user.id), docId });
+  }
+  return Array.from(byUser.values());
+}
+
+function emitFolderPresence(io: Server<ClientToServerEvents, ServerToClientEvents>, folderKey: string) {
+  io.to(folderRoom(folderKey)).emit("folder:presence", buildFolderPresence(folderKey));
 }
 
 type AccessRole = "owner" | "editor" | "viewer" | "none";
@@ -200,6 +223,46 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
       handleLeave(io, socket, docId, user);
     });
 
+    // Folder presence: announce which file this user is currently on within a
+    // shared folder. Re-emitted by the client whenever they switch files.
+    socket.on("folder:join", (folderKey, docId) => {
+      const data = socket.data as any;
+
+      // If switching to a different folder, clean up the previous one.
+      if (data.folderKey && data.folderKey !== folderKey) {
+        const prev = folderPresence.get(data.folderKey);
+        if (prev) {
+          prev.delete(socket.id);
+          if (prev.size === 0) folderPresence.delete(data.folderKey);
+        }
+        socket.leave(folderRoom(data.folderKey));
+        emitFolderPresence(io, data.folderKey);
+      }
+
+      data.folderKey = folderKey;
+      socket.join(folderRoom(folderKey));
+
+      let members = folderPresence.get(folderKey);
+      if (!members) {
+        members = new Map<string, { user: User; docId: string }>();
+        folderPresence.set(folderKey, members);
+      }
+      members.set(socket.id, { user, docId });
+      emitFolderPresence(io, folderKey);
+    });
+
+    socket.on("folder:leave", (folderKey) => {
+      const data = socket.data as any;
+      const members = folderPresence.get(folderKey);
+      if (members) {
+        members.delete(socket.id);
+        if (members.size === 0) folderPresence.delete(folderKey);
+      }
+      socket.leave(folderRoom(folderKey));
+      if (data.folderKey === folderKey) data.folderKey = undefined;
+      emitFolderPresence(io, folderKey);
+    });
+
     // Handle disconnect
     // Broadcast new comment thread
     socket.on("comment:thread_created", (docId, thread) => {
@@ -234,6 +297,18 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
         if (room !== socket.id) {
           handleLeave(io, socket, room, user);
         }
+      }
+
+      // Clean up folder presence for this socket.
+      const data = socket.data as any;
+      if (data.folderKey) {
+        const members = folderPresence.get(data.folderKey);
+        if (members) {
+          members.delete(socket.id);
+          if (members.size === 0) folderPresence.delete(data.folderKey);
+        }
+        emitFolderPresence(io, data.folderKey);
+        data.folderKey = undefined;
       }
     });
   });

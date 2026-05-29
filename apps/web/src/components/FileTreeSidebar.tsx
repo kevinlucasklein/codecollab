@@ -6,7 +6,7 @@ import { Folder, FolderOpen, FileText, ChevronRight, ChevronDown } from 'lucide-
 import { getFileIconMeta } from '../lib/fileIcons';
 import { useAuth } from '../lib/auth';
 import { fileHrefInFolder, type FolderContext } from '../lib/folderLink';
-import type { Document } from '@codecollab/shared';
+import type { Document, PresenceUser } from '@codecollab/shared';
 import styles from './fileTreeSidebar.module.css';
 
 interface FileTreeSidebarProps {
@@ -16,11 +16,14 @@ interface FileTreeSidebarProps {
   // folder endpoint, which any authenticated user can read) and file links
   // preserve the folder context so shared links keep working.
   folderContext?: FolderContext;
+  // Map of docId -> collaborators currently editing that file, used to show
+  // their avatars next to the file in the tree.
+  presenceByDoc?: Map<string, PresenceUser[]>;
 }
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
 
-export function FileTreeSidebar({ currentDocId, isOpen = true, folderContext }: FileTreeSidebarProps) {
+export function FileTreeSidebar({ currentDocId, isOpen = true, folderContext, presenceByDoc }: FileTreeSidebarProps) {
   const { token } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -179,6 +182,7 @@ export function FileTreeSidebar({ currentDocId, isOpen = true, folderContext }: 
           const isActive = doc.id === currentDocId;
           
           const href = folderContext ? fileHrefInFolder(doc.id, folderContext) : `/doc/${doc.id}`;
+          const collaborators = presenceByDoc?.get(doc.id) ?? [];
           return (
             <Link
               href={href}
@@ -193,6 +197,23 @@ export function FileTreeSidebar({ currentDocId, isOpen = true, folderContext }: 
               <span className={styles.fileName}>
                 {node.name}
               </span>
+              {collaborators.length > 0 && (
+                <span className={styles.presenceAvatars}>
+                  {collaborators.slice(0, 3).map((u) => (
+                    <span
+                      key={u.id}
+                      className={styles.presenceAvatar}
+                      style={{ backgroundColor: u.color }}
+                      title={`${u.displayName} is editing this file`}
+                    >
+                      {u.displayName.charAt(0).toUpperCase()}
+                    </span>
+                  ))}
+                  {collaborators.length > 3 && (
+                    <span className={styles.presenceMore}>+{collaborators.length - 3}</span>
+                  )}
+                </span>
+              )}
             </Link>
           );
         }
