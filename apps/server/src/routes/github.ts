@@ -1,9 +1,41 @@
 import { Router } from "express";
 import { Octokit } from "octokit";
+import * as Y from "yjs";
 import { authenticate } from "../middleware/auth.js";
 import { query } from "../db/index.js";
 
 export const githubRouter: ReturnType<typeof Router> = Router();
+
+// Reconstruct a document's current text from its stored Yjs state, falling back
+// to the originally-imported content if there's no collaborative state yet.
+function currentDocText(yjsState: Buffer | null, baseContent: string | null): string {
+  if (yjsState) {
+    try {
+      const ydoc = new Y.Doc();
+      Y.applyUpdate(ydoc, new Uint8Array(yjsState));
+      return ydoc.getText("monaco").toString();
+    } catch {
+      // fall through to base content
+    }
+  }
+  return baseContent ?? "";
+}
+
+// Does this user have access to push the given folder (owner, or shared)?
+async function canAccessFolder(userId: string, ownerId: string, repo: string, branch: string): Promise<boolean> {
+  if (userId === ownerId) return true;
+  const res = await query(
+    `SELECT 1 FROM folder_shares
+       WHERE owner_id = $1 AND github_repo = $2 AND github_branch = COALESCE($3, '') AND shared_with = $4
+     UNION
+     SELECT 1 FROM document_shares ds
+       JOIN documents d ON d.id = ds.document_id
+       WHERE d.owner_id = $1 AND d.github_repo = $2 AND COALESCE(d.github_branch, '') = COALESCE($3, '') AND ds.shared_with = $4
+     LIMIT 1`,
+    [ownerId, repo, branch, userId]
+  );
+  return res.rows.length > 0;
+}
 
 // Middleware to ensure user has connected GitHub
 githubRouter.use(authenticate);
@@ -103,5 +135,143 @@ githubRouter.get("/repos/:owner/:repo/tree/:branch", async (req, res) => {
   } catch (error: any) {
     console.error("Error fetching GitHub file tree:", error);
     return res.status(500).json({ success: false, error: "Failed to fetch file tree" });
+  }
+});
+
+// POST /api/github/push
+// Commit the folder's changed files (current collaborative content vs. what was
+// imported) to a branch, under the acting user's GitHub account.
+// Body: { ownerId, repo, baseBranch, newBranch, commitMessage }
+githubRouter.post("/push", async (req, res) => {
+  const userId = req.user!.id;
+  const { ownerId, repo, baseBranch, newBranch, commitMessage } = req.body as {
+    ownerId?: string;
+    repo?: string;
+    baseBranch?: string;
+    newBranch?: string;
+    commitMessage?: string;
+  };
+
+  if (!ownerId || !repo || !baseBranch || !newBranch) {
+    return res.status(400).json({ success: false, error: "Missing ownerId, repo, baseBranch, or newBranch" });
+  }
+  if (!/^[A-Za-z0-9._\/-]+$/.test(newBranch) || newBranch.startsWith("/") || newBranch.endsWith("/")) {
+    return res.status(400).json({ success: false, error: "Invalid branch name" });
+  }
+
+  const [owner, repoName] = repo.split("/");
+  if (!owner || !repoName) {
+    return res.status(400).json({ success: false, error: "Invalid repo" });
+  }
+
+  try {
+    // 1. Authorization: must own or have the folder shared.
+    if (!(await canAccessFolder(userId, ownerId, repo, baseBranch))) {
+      return res.status(403).json({ success: false, error: "You don't have access to this folder" });
+    }
+
+    // 2. Gather the folder's documents and compute which ones changed.
+    const docsRes = await query(
+      `SELECT github_file_path, yjs_state, base_content
+       FROM documents
+       WHERE owner_id = $1 AND github_repo = $2 AND COALESCE(github_branch, '') = COALESCE($3, '')
+         AND github_file_path IS NOT NULL`,
+      [ownerId, repo, baseBranch]
+    );
+
+    const changed: { path: string; content: string }[] = [];
+    for (const row of docsRes.rows) {
+      const text = currentDocText(row.yjs_state ?? null, row.base_content ?? null);
+      if (text !== (row.base_content ?? "")) {
+        changed.push({ path: row.github_file_path, content: text });
+      }
+    }
+
+    if (changed.length === 0) {
+      return res.json({ success: true, data: { pushedFiles: [], message: "No changes to push" } });
+    }
+
+    const octokit = new Octokit({ auth: req.user!.githubAccessToken });
+
+    // 3. Determine the parent commit: an existing target branch head, else the
+    //    base branch head (so we can branch off it).
+    let parentSha: string;
+    let branchExisted = false;
+    try {
+      const existing = await octokit.rest.git.getRef({ owner, repo: repoName, ref: `heads/${newBranch}` });
+      parentSha = existing.data.object.sha;
+      branchExisted = true;
+    } catch {
+      const baseRef = await octokit.rest.git.getRef({ owner, repo: repoName, ref: `heads/${baseBranch}` });
+      parentSha = baseRef.data.object.sha;
+    }
+
+    const parentCommit = await octokit.rest.git.getCommit({ owner, repo: repoName, commit_sha: parentSha });
+    const baseTreeSha = parentCommit.data.tree.sha;
+
+    // 4. Create blobs + a tree for the changed files.
+    const treeItems = await Promise.all(
+      changed.map(async (file) => {
+        const blob = await octokit.rest.git.createBlob({
+          owner,
+          repo: repoName,
+          content: Buffer.from(file.content, "utf-8").toString("base64"),
+          encoding: "base64",
+        });
+        return { path: file.path, mode: "100644" as const, type: "blob" as const, sha: blob.data.sha };
+      })
+    );
+
+    const newTree = await octokit.rest.git.createTree({
+      owner,
+      repo: repoName,
+      base_tree: baseTreeSha,
+      tree: treeItems,
+    });
+
+    // 5. Create the commit and point the branch at it.
+    const commit = await octokit.rest.git.createCommit({
+      owner,
+      repo: repoName,
+      message: commitMessage?.trim() || `Update ${changed.length} file(s) via CodeCollab`,
+      tree: newTree.data.sha,
+      parents: [parentSha],
+    });
+
+    if (branchExisted) {
+      await octokit.rest.git.updateRef({
+        owner,
+        repo: repoName,
+        ref: `heads/${newBranch}`,
+        sha: commit.data.sha,
+      });
+    } else {
+      await octokit.rest.git.createRef({
+        owner,
+        repo: repoName,
+        ref: `refs/heads/${newBranch}`,
+        sha: commit.data.sha,
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        branch: newBranch,
+        commitSha: commit.data.sha,
+        pushedFiles: changed.map((c) => c.path),
+        branchUrl: `https://github.com/${owner}/${repoName}/tree/${encodeURIComponent(newBranch)}`,
+        compareUrl: `https://github.com/${owner}/${repoName}/compare/${encodeURIComponent(baseBranch)}...${encodeURIComponent(newBranch)}?expand=1`,
+      },
+    });
+  } catch (error: any) {
+    console.error("GitHub push error:", error?.status, error?.message);
+    if (error?.status === 403 || error?.status === 404) {
+      return res.status(403).json({
+        success: false,
+        error: "GitHub rejected the push. You likely don't have write access to this repository.",
+      });
+    }
+    return res.status(500).json({ success: false, error: "Failed to push to GitHub" });
   }
 });

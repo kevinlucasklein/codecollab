@@ -12,8 +12,9 @@ import { PresenceBar } from "../../../components/PresenceBar";
 import { CommentSidebar } from "../../../components/CommentSidebar";
 import { FileTreeSidebar } from "../../../components/FileTreeSidebar";
 import { ShareDialog } from "../../../components/ShareDialog";
+import { PushDialog } from "../../../components/PushDialog";
 import type { FolderContext } from "../../../lib/folderLink";
-import { Sidebar } from "lucide-react";
+import { Sidebar, GitBranch } from "lucide-react";
 import styles from "../../../components/editor.module.css";
 import type { Document, PresenceUser, FolderPresenceEntry } from "@codecollab/shared";
 import toast from "react-hot-toast";
@@ -52,6 +53,7 @@ export default function DocumentPage() {
   const [viewMode, setViewMode] = useState<"code" | "diff">("code");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isPushOpen, setIsPushOpen] = useState(false);
   // Map of docId -> collaborators currently on that file (within the folder).
   const [folderPresence, setFolderPresence] = useState<Map<string, PresenceUser[]>>(new Map());
 
@@ -444,6 +446,16 @@ export default function DocumentPage() {
             <div className={`${styles.dot} ${isConnected ? styles.connected : ""}`}></div>
             {isConnected ? (isSynced ? "Synced" : "Syncing...") : "Disconnected"}
           </div>
+          {folderContext && folderContext.repo && (
+            <button
+              onClick={() => setIsPushOpen(true)}
+              className={styles.shareButton}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              title="Push changed files to GitHub"
+            >
+              <GitBranch size={14} /> Push
+            </button>
+          )}
           <button onClick={handleShareClick} className={styles.shareButton}>
             Share
           </button>
@@ -505,6 +517,10 @@ export default function DocumentPage() {
           shareLink={`${window.location.origin}/doc/${docId}`}
           onClose={() => setIsShareOpen(false)}
         />
+      )}
+
+      {isPushOpen && folderContext && (
+        <PushDialog folder={folderContext} onClose={() => setIsPushOpen(false)} />
       )}
     </div>
   );
