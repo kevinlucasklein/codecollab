@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Folder, FolderOpen, FileText, ChevronRight, ChevronDown } from 'lucide-react';
 import { getFileIconMeta } from '../lib/fileIcons';
+import { useAuth } from '../lib/auth';
 import type { Document } from '@codecollab/shared';
 import styles from './fileTreeSidebar.module.css';
 
@@ -15,16 +16,18 @@ interface FileTreeSidebarProps {
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
 
 export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebarProps) {
+  const { token } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['Local Workspace']));
 
   useEffect(() => {
+    if (!token) return;
     const fetchDocuments = async () => {
       try {
         const res = await fetch(`${SERVER_URL}/api/documents`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${token}`,
           },
         });
         const data = await res.json();
@@ -59,7 +62,7 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
     };
 
     fetchDocuments();
-  }, [currentDocId]);
+  }, [currentDocId, token]);
 
   // Group documents by repository first, then build a nested tree
   const tree = useMemo(() => {
