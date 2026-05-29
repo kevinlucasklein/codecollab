@@ -53,7 +53,8 @@ async function inviteRepoCollaborator(ownerUserId: string, targetUserId: string,
       permission: "push",
     });
     // 201 => invitation created; 204 => already a collaborator (no body).
-    return resp.status === 204 ? "already" : "invited";
+    // (Octokit's types only declare 201, so compare as a number.)
+    return (resp.status as number) === 204 ? "already" : "invited";
   } catch (e: any) {
     console.error("addCollaborator failed:", e?.status, e?.message);
     return "failed";
