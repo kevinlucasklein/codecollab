@@ -141,24 +141,25 @@ export function useYjsSync(docId: string) {
         sock.emit("sync:update", docId, update);
       }
     };
+    // Awareness is still used for live cursors (via y-codemirror); we only
+    // broadcast local changes. The participant list itself now comes from the
+    // server's authoritative presence:update event (no stale ghosts).
     const handleAwarenessUpdate = ({ added, updated, removed }: any, origin: any) => {
       if (origin === "local") {
         const changedClients = added.concat(updated, removed);
         const update = encodeAwarenessUpdate(awareness, changedClients);
         sock.emit("sync:awareness", docId, update);
       }
+    };
 
-      const users = new Map<string, PresenceUser>();
-      awareness.getStates().forEach((state, clientId) => {
-        if (state.user) {
-          users.set(clientId.toString(), {
-            id: clientId.toString(),
-            displayName: state.user.name,
-            color: state.user.color
-          });
-        }
+    // Server-authoritative presence: a deduped list of users in the room.
+    // Exclude ourselves so the bar shows "others editing".
+    const handlePresence = (users: PresenceUser[]) => {
+      const map = new Map<string, PresenceUser>();
+      users.forEach((u) => {
+        if (u.id !== user.id) map.set(u.id, u);
       });
-      setActiveUsers(users);
+      setActiveUsers(map);
     };
 
     sock.on("connect", handleConnect);
@@ -167,6 +168,7 @@ export function useYjsSync(docId: string) {
     sock.on("doc:loaded", handleDocLoaded);
     sock.on("sync:update", handleSyncUpdate);
     sock.on("sync:awareness", handleRemoteAwareness);
+    sock.on("presence:update", handlePresence);
     doc.on("update", handleYjsUpdate);
     awareness.on("update", handleAwarenessUpdate);
 
@@ -185,6 +187,8 @@ export function useYjsSync(docId: string) {
       sock.off("doc:loaded", handleDocLoaded);
       sock.off("sync:update", handleSyncUpdate);
       sock.off("sync:awareness", handleRemoteAwareness);
+      sock.off("presence:update", handlePresence);
+      setActiveUsers(new Map());
       sock.emit("doc:leave", docId);
       awareness.destroy();
     };

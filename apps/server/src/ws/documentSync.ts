@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 import * as Y from "yjs";
 import jwt from "jsonwebtoken";
 import { pool, query } from "../db/index.js";
-import type { ClientToServerEvents, ServerToClientEvents, User } from "@codecollab/shared";
+import type { ClientToServerEvents, ServerToClientEvents, User, PresenceUser } from "@codecollab/shared";
 
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production-use-a-long-random-string";
 
@@ -15,6 +15,36 @@ const docs = new Map<string, {
 }>();
 
 const SAVE_DEBOUNCE_MS = 2000;
+
+// Authoritative presence: which sockets are in which room, and who they are.
+// Keyed: docId -> (socketId -> User). Deduped by user id when broadcast.
+const roomPresence = new Map<string, Map<string, User>>();
+
+// Deterministic color from a user id (matches the client's generator).
+function getUserColor(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash % 360);
+  return `hsl(${hue}, 70%, 50%)`;
+}
+
+function buildPresence(docId: string): PresenceUser[] {
+  const members = roomPresence.get(docId);
+  if (!members) return [];
+  const byUser = new Map<string, PresenceUser>();
+  for (const u of members.values()) {
+    if (!byUser.has(u.id)) {
+      byUser.set(u.id, { id: u.id, displayName: u.displayName, color: getUserColor(u.id) });
+    }
+  }
+  return Array.from(byUser.values());
+}
+
+function emitPresence(io: Server<ClientToServerEvents, ServerToClientEvents>, docId: string) {
+  io.to(docId).emit("presence:update", buildPresence(docId));
+}
 
 type AccessRole = "owner" | "editor" | "viewer" | "none";
 
@@ -107,14 +137,21 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
         // 3. Join the socket.io room
         socket.join(docId);
 
+        // 3b. Record presence and broadcast the updated, deduped participant
+        // list to everyone in the room (including this socket).
+        let members = roomPresence.get(docId);
+        if (!members) {
+          members = new Map<string, User>();
+          roomPresence.set(docId, members);
+        }
+        members.set(socket.id, user);
+
         // 4. Send current document state to the client
         const stateVector = Y.encodeStateAsUpdate(roomDoc.doc);
         socket.emit("doc:loaded", stateVector);
 
-        // 5. Notify others that a user joined
-        // We generate a random color for the user session
-        const color = "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
-        socket.to(docId).emit("user:joined", { id: user.id, displayName: user.displayName, color });
+        // 5. Broadcast live presence to the whole room.
+        emitPresence(io, docId);
 
         callback({ success: true });
         console.log(`User ${user.displayName} joined doc ${docId}. Active connections: ${roomDoc.connections}`);
@@ -160,7 +197,7 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
 
     // Handle leaving a document
     socket.on("doc:leave", (docId) => {
-      handleLeave(socket, docId, user);
+      handleLeave(io, socket, docId, user);
     });
 
     // Handle disconnect
@@ -188,12 +225,14 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
       socket.to(docId).emit("document:renamed", newTitle);
     });
 
-    socket.on("disconnect", () => {
-      console.log(`User disconnected: ${user.displayName} (${socket.id})`);
-      // User could be in multiple rooms, find all
+    // Use "disconnecting" (not "disconnect"): at this point socket.rooms is
+    // still populated, so we can clean up presence for every room the socket
+    // was in. On "disconnect" the rooms have already been cleared.
+    socket.on("disconnecting", () => {
+      console.log(`User disconnecting: ${user.displayName} (${socket.id})`);
       for (const room of socket.rooms) {
         if (room !== socket.id) {
-          handleLeave(socket, room, user);
+          handleLeave(io, socket, room, user);
         }
       }
     });
@@ -201,9 +240,21 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
 }
 
 // Helper to handle a user leaving a document room
-function handleLeave(socket: Socket, docId: string, user: User) {
+function handleLeave(
+  io: Server<ClientToServerEvents, ServerToClientEvents>,
+  socket: Socket,
+  docId: string,
+  user: User
+) {
   socket.leave(docId);
-  socket.to(docId).emit("user:left", user.id);
+
+  // Remove this socket from room presence and rebroadcast the live list.
+  const members = roomPresence.get(docId);
+  if (members) {
+    members.delete(socket.id);
+    if (members.size === 0) roomPresence.delete(docId);
+  }
+  emitPresence(io, docId);
 
   const roomDoc = docs.get(docId);
   if (roomDoc) {

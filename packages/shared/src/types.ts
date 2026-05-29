@@ -82,6 +82,8 @@ export interface ServerToClientEvents {
   "comment:resolved": (threadId: string) => void;
   "document:renamed": (newTitle: string) => void;
   "document:review_updated": (status: string) => void;
+  // Authoritative, deduped list of users currently in the document room.
+  "presence:update": (users: PresenceUser[]) => void;
 }
 
 export interface ClientToServerEvents {
