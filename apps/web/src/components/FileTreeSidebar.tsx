@@ -137,6 +137,40 @@ export function FileTreeSidebar({ currentDocId, isOpen = true, folderContext, pr
     });
   };
 
+  // Collect all collaborators anywhere within a node's subtree, deduped by id.
+  // Used so a collapsed folder shows the avatars of people working inside it.
+  const collectSubtreePresence = (node: any): PresenceUser[] => {
+    const map = new Map<string, PresenceUser>();
+    const walk = (n: any) => {
+      if (n.type === 'file') {
+        (presenceByDoc?.get(n.doc.id) ?? []).forEach((u) => map.set(u.id, u));
+      } else {
+        Object.values(n.children).forEach(walk);
+      }
+    };
+    walk(node);
+    return Array.from(map.values());
+  };
+
+  const renderAvatars = (users: PresenceUser[], context: string) => {
+    if (users.length === 0) return null;
+    return (
+      <span className={styles.presenceAvatars}>
+        {users.slice(0, 3).map((u) => (
+          <span
+            key={u.id}
+            className={styles.presenceAvatar}
+            style={{ backgroundColor: u.color }}
+            title={`${u.displayName} is editing ${context}`}
+          >
+            {u.displayName.charAt(0).toUpperCase()}
+          </span>
+        ))}
+        {users.length > 3 && <span className={styles.presenceMore}>+{users.length - 3}</span>}
+      </span>
+    );
+  };
+
   const renderTree = (nodes: Record<string, any>, currentPath: string, depth = 0) => {
     return Object.entries(nodes)
       .sort(([keyA, nodeA], [keyB, nodeB]) => {
@@ -166,8 +200,9 @@ export function FileTreeSidebar({ currentDocId, isOpen = true, folderContext, pr
                 <span className={styles.folderName} title={key}>
                   {key}
                 </span>
+                {!isExpanded && renderAvatars(collectSubtreePresence(node), "a file in this folder")}
               </div>
-              
+
               {isExpanded && (
                 <div className={styles.fileList} style={{ paddingLeft: 0 }}>
                   {renderTree(node.children, fullPath, depth + 1)}
@@ -197,23 +232,7 @@ export function FileTreeSidebar({ currentDocId, isOpen = true, folderContext, pr
               <span className={styles.fileName}>
                 {node.name}
               </span>
-              {collaborators.length > 0 && (
-                <span className={styles.presenceAvatars}>
-                  {collaborators.slice(0, 3).map((u) => (
-                    <span
-                      key={u.id}
-                      className={styles.presenceAvatar}
-                      style={{ backgroundColor: u.color }}
-                      title={`${u.displayName} is editing this file`}
-                    >
-                      {u.displayName.charAt(0).toUpperCase()}
-                    </span>
-                  ))}
-                  {collaborators.length > 3 && (
-                    <span className={styles.presenceMore}>+{collaborators.length - 3}</span>
-                  )}
-                </span>
-              )}
+              {renderAvatars(collaborators, "this file")}
             </Link>
           );
         }
