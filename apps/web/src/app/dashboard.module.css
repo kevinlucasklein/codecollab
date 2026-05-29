@@ -278,6 +278,74 @@
   display: inline-block;
 }
 
+/* Folder cards */
+.folderCard {
+  align-items: flex-start;
+}
+
+.folderCard .docInfo {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.folderFileList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+  cursor: default;
+}
+
+.folderFileItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.folderFileItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-primary);
+}
+
+.folderFileName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.openFolderButton {
+  margin-top: var(--spacing-sm);
+  align-self: flex-start;
+  background: var(--color-accent);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.openFolderButton:hover {
+  background: var(--color-accent-hover);
+}
+
+/* Expanded folder cards take the full row so the file list has room. */
+.folderCard:has(.folderFileList) {
+  grid-column: 1 / -1;
+}
+
 /* Empty State & Loading */
 .emptyState {
   display: flex;

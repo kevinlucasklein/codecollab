@@ -57,6 +57,53 @@ documentsRouter.get("/", async (req, res) => {
 });
 
 // ----------------------------------------------------------------------------
+// GET /api/documents/folder
+// List all documents belonging to a single GitHub repo+branch "folder".
+// Accessible to any authenticated user (so shared folder links work), scoped
+// by the folder owner so different users' imports don't collide.
+// NOTE: must be declared before GET /:id so "folder" isn't treated as an id.
+// ----------------------------------------------------------------------------
+documentsRouter.get("/folder", async (req, res) => {
+  const owner = req.query.owner as string | undefined;
+  const repo = req.query.repo as string | undefined;
+  const branch = req.query.branch as string | undefined;
+
+  if (!owner || !repo) {
+    return res.status(400).json({ success: false, error: "Missing owner or repo" });
+  }
+
+  try {
+    const result = await query(
+      `SELECT d.id, d.title, d.owner_id, d.language, d.review_status, d.created_at, d.updated_at, d.github_repo, d.github_branch, d.github_file_path, u.display_name as owner_display_name
+       FROM documents d
+       JOIN users u ON d.owner_id = u.id
+       WHERE d.owner_id = $1 AND d.github_repo = $2 AND ($3::text IS NULL OR d.github_branch = $3)
+       ORDER BY d.github_file_path ASC NULLS LAST, d.title ASC`,
+      [owner, repo, branch ?? null]
+    );
+
+    const documents: Document[] = result.rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      ownerId: row.owner_id,
+      ownerDisplayName: row.owner_display_name,
+      language: row.language,
+      reviewStatus: row.review_status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      githubRepo: row.github_repo,
+      githubBranch: row.github_branch,
+      githubFilePath: row.github_file_path,
+    }));
+
+    return res.json({ success: true, data: documents });
+  } catch (error) {
+    console.error("Failed to fetch folder documents:", error);
+    return res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+// ----------------------------------------------------------------------------
 // POST /api/documents/from-github
 // Creates a new document seeded from a GitHub file
 // ----------------------------------------------------------------------------

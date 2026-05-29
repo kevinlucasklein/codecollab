@@ -5,17 +5,22 @@ import Link from 'next/link';
 import { Folder, FolderOpen, FileText, ChevronRight, ChevronDown } from 'lucide-react';
 import { getFileIconMeta } from '../lib/fileIcons';
 import { useAuth } from '../lib/auth';
+import { fileHrefInFolder, type FolderContext } from '../lib/folderLink';
 import type { Document } from '@codecollab/shared';
 import styles from './fileTreeSidebar.module.css';
 
 interface FileTreeSidebarProps {
   currentDocId: string;
   isOpen?: boolean;
+  // When provided, the sidebar shows only this folder's files (fetched from the
+  // folder endpoint, which any authenticated user can read) and file links
+  // preserve the folder context so shared links keep working.
+  folderContext?: FolderContext;
 }
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
 
-export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebarProps) {
+export function FileTreeSidebar({ currentDocId, isOpen = true, folderContext }: FileTreeSidebarProps) {
   const { token } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,11 +29,16 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
   // Fetch the document list once per session (re-runs only if the token changes).
   // Keeping this independent of currentDocId means switching files via the sidebar
   // won't refetch or flash the tree back to a loading state.
+  // In folder context, fetch just that folder's files instead.
   useEffect(() => {
     if (!token) return;
+    const url = folderContext
+      ? `${SERVER_URL}/api/documents/folder?owner=${encodeURIComponent(folderContext.uid)}&repo=${encodeURIComponent(folderContext.repo)}&branch=${encodeURIComponent(folderContext.branch)}`
+      : `${SERVER_URL}/api/documents`;
+
     const fetchDocuments = async () => {
       try {
-        const res = await fetch(`${SERVER_URL}/api/documents`, {
+        const res = await fetch(url, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -45,7 +55,7 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
     };
 
     fetchDocuments();
-  }, [token]);
+  }, [token, folderContext?.uid, folderContext?.repo, folderContext?.branch]);
 
   // Auto-expand the folders leading to the currently open document.
   // Runs whenever the selection or the loaded document list changes, without
@@ -168,9 +178,10 @@ export function FileTreeSidebar({ currentDocId, isOpen = true }: FileTreeSidebar
           const { icon: Icon, color } = getFileIconMeta(doc.githubFilePath || doc.title);
           const isActive = doc.id === currentDocId;
           
+          const href = folderContext ? fileHrefInFolder(doc.id, folderContext) : `/doc/${doc.id}`;
           return (
-            <Link 
-              href={`/doc/${doc.id}`} 
+            <Link
+              href={href}
               key={doc.id}
               className={`${styles.fileItem} ${isActive ? styles.active : ''}`}
               style={{ paddingLeft: `${(depth * 12) + 28}px` }}

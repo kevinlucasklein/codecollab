@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import type { Document } from "@codecollab/shared";
 import { getFileIconMeta } from "../lib/fileIcons";
-import { Pencil, Share2, Trash2 } from "lucide-react";
+import { folderKey, folderContextFromDoc, fileHrefInFolder, folderQuery } from "../lib/folderLink";
+import { Pencil, Share2, Trash2, Folder, FolderOpen, ChevronRight, ChevronDown, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./dashboard.module.css";
 
@@ -23,6 +24,61 @@ export default function DashboardPage() {
   const [showRepoBrowser, setShowRepoBrowser] = useState(false);
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  // Group documents that share a repo+branch into folders. A group with a
+  // single file is shown as an ordinary card instead of a folder.
+  const { folders, singles } = useMemo(() => {
+    const groups = new Map<string, Document[]>();
+    const singleDocs: Document[] = [];
+
+    documents.forEach((doc) => {
+      const key = folderKey(doc);
+      if (!key) {
+        singleDocs.push(doc);
+        return;
+      }
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(doc);
+    });
+
+    const folderList: { key: string; docs: Document[] }[] = [];
+    groups.forEach((docs, key) => {
+      if (docs.length > 1) {
+        // Keep a stable, path-sorted order for the file list.
+        docs.sort((a, b) => (a.githubFilePath || a.title).localeCompare(b.githubFilePath || b.title));
+        folderList.push({ key, docs });
+      } else {
+        singleDocs.push(docs[0]);
+      }
+    });
+
+    // Most-recently-updated docs first within the singles list.
+    singleDocs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    return { folders: folderList, singles: singleDocs };
+  }, [documents]);
+
+  const toggleFolder = (key: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const handleShareFolder = (e: React.MouseEvent, docs: Document[]) => {
+    e.stopPropagation();
+    const ctx = folderContextFromDoc(docs[0]);
+    const url = `${window.location.origin}/doc/${docs[0].id}?${folderQuery(ctx)}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Folder share link copied to clipboard!");
+  };
+
+  const handleOpenFolder = (e: React.MouseEvent, docs: Document[]) => {
+    e.stopPropagation();
+    const ctx = folderContextFromDoc(docs[0]);
+    router.push(fileHrefInFolder(docs[0].id, ctx));
+  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -233,7 +289,95 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className={styles.grid}>
-            {documents.map((doc) => {
+            {folders.map(({ key, docs }) => {
+              const first = docs[0];
+              const isExpanded = expandedFolders.has(key);
+              const ctx = folderContextFromDoc(first);
+              const lastUpdated = docs
+                .map((d) => new Date(d.updatedAt).getTime())
+                .reduce((a, b) => Math.max(a, b), 0);
+
+              return (
+                <div
+                  key={key}
+                  className={`${styles.docCard} ${styles.folderCard}`}
+                  onClick={() => toggleFolder(key)}
+                >
+                  <div className={styles.cardActions}>
+                    <button
+                      className={styles.actionButton}
+                      onClick={(e) => handleOpenFolder(e, docs)}
+                      title="Open folder"
+                    >
+                      <ExternalLink size={16} />
+                    </button>
+                    <button
+                      className={styles.actionButton}
+                      onClick={(e) => handleShareFolder(e, docs)}
+                      title="Copy folder share link"
+                    >
+                      <Share2 size={16} />
+                    </button>
+                  </div>
+
+                  <div
+                    className={styles.docIcon}
+                    style={{ color: "#d2a8ff", backgroundColor: "#d2a8ff15", border: "1px solid #d2a8ff30" }}
+                  >
+                    {isExpanded ? <FolderOpen size={24} /> : <Folder size={24} />}
+                  </div>
+                  <div className={styles.docInfo}>
+                    <h3 className={styles.docTitle} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      {first.githubRepo}
+                    </h3>
+                    <div className={styles.docMeta}>
+                      <span className={styles.repoTag}>
+                        <svg height="14" width="14" viewBox="0 0 16 16" fill="currentColor" style={{ verticalAlign: "text-bottom", marginRight: "4px" }}>
+                          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path>
+                        </svg>
+                        {first.githubBranch}
+                      </span>
+                      <span className={styles.metaType}>{docs.length} files</span>
+                      <span>Edited {formatDate(new Date(lastUpdated).toISOString())}</span>
+                    </div>
+
+                    {isExpanded && (
+                      <div className={styles.folderFileList} onClick={(e) => e.stopPropagation()}>
+                        {docs.map((d) => {
+                          const fm = getFileIconMeta(d.githubFilePath || d.title);
+                          const FIcon = fm.icon;
+                          return (
+                            <a
+                              key={d.id}
+                              href={fileHrefInFolder(d.id, ctx)}
+                              className={styles.folderFileItem}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                router.push(fileHrefInFolder(d.id, ctx));
+                              }}
+                            >
+                              <span style={{ color: fm.color, display: "flex", alignItems: "center" }}>
+                                <FIcon size={14} />
+                              </span>
+                              <span className={styles.folderFileName}>{d.githubFilePath || d.title}</span>
+                            </a>
+                          );
+                        })}
+                        <button
+                          className={styles.openFolderButton}
+                          onClick={(e) => handleOpenFolder(e, docs)}
+                        >
+                          Open folder
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {singles.map((doc) => {
               const meta = getFileIconMeta(doc.githubFilePath || doc.title);
               const Icon = meta.icon;
 

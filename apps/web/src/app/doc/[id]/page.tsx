@@ -11,6 +11,7 @@ import { DiffEditor } from "../../../components/DiffEditor";
 import { PresenceBar } from "../../../components/PresenceBar";
 import { CommentSidebar } from "../../../components/CommentSidebar";
 import { FileTreeSidebar } from "../../../components/FileTreeSidebar";
+import type { FolderContext } from "../../../lib/folderLink";
 import { Sidebar } from "lucide-react";
 import styles from "../../../components/editor.module.css";
 import type { Document } from "@codecollab/shared";
@@ -26,6 +27,18 @@ export default function DocumentPage() {
   const params = useParams();
   const docId = params.id as string;
   const router = useRouter();
+
+  // Folder context (set when arriving from / sharing a folder view).
+  // Read from the URL on the client to avoid the Suspense requirement that
+  // useSearchParams imposes during prerendering.
+  const [folderContext, setFolderContext] = useState<FolderContext | undefined>(undefined);
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const fuid = sp.get("fuid");
+    const frepo = sp.get("frepo");
+    const fbranch = sp.get("fbranch");
+    setFolderContext(fuid && frepo ? { uid: fuid, repo: frepo, branch: fbranch ?? "" } : undefined);
+  }, [docId]);
 
   const { user, token, isLoading } = useAuth();
   const [docMeta, setDocMeta] = useState<Document | null>(() => docMetaCache.get(docId) ?? null);
@@ -388,7 +401,7 @@ export default function DocumentPage() {
 
       {/* Main Content Area */}
       <div className={styles.mainContent} style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <FileTreeSidebar currentDocId={docId} isOpen={isSidebarOpen} />
+        <FileTreeSidebar currentDocId={docId} isOpen={isSidebarOpen} folderContext={folderContext} />
         {!docMeta ? (
           <div className={styles.skeletonWrapper}>
             <div className={styles.skeletonLine} style={{ width: '60%' }}></div>
