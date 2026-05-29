@@ -18,13 +18,17 @@ import toast from "react-hot-toast";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
 
+// Cache document metadata across navigations so revisiting a file renders its
+// header/editor immediately instead of flashing the loading skeleton.
+const docMetaCache = new Map<string, Document>();
+
 export default function DocumentPage() {
   const params = useParams();
   const docId = params.id as string;
   const router = useRouter();
-  
+
   const { user, token, isLoading } = useAuth();
-  const [docMeta, setDocMeta] = useState<Document | null>(null);
+  const [docMeta, setDocMeta] = useState<Document | null>(() => docMetaCache.get(docId) ?? null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   
   // UI State
@@ -34,9 +38,17 @@ export default function DocumentPage() {
   const [viewMode, setViewMode] = useState<"code" | "diff">("code");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // 1. Fetch document metadata
+  // 1. Fetch document metadata.
+  // Show any cached metadata for this file immediately (no skeleton flash on
+  // revisit), then refresh in the background to pick up any changes.
   useEffect(() => {
     if (!token || !docId) return;
+
+    const cached = docMetaCache.get(docId);
+    if (cached) {
+      setDocMeta(cached);
+      setFetchError(null);
+    }
 
     const fetchDocMeta = async () => {
       try {
@@ -44,14 +56,15 @@ export default function DocumentPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        
+
         if (data.success && data.data) {
+          docMetaCache.set(docId, data.data);
           setDocMeta(data.data);
-        } else {
+        } else if (!cached) {
           setFetchError(data.error || "Document not found");
         }
       } catch (err) {
-        setFetchError("Failed to fetch document");
+        if (!cached) setFetchError("Failed to fetch document");
       }
     };
 

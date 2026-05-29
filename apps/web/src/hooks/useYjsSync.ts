@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import * as Y from "yjs";
 import { Awareness, encodeAwarenessUpdate, applyAwarenessUpdate } from "y-protocols/awareness";
 import { io, Socket } from "socket.io-client";
@@ -21,16 +21,58 @@ function getUserColor(userId: string) {
   return `hsl(${hue}, 70%, 50%)`;
 }
 
+// ---------------------------------------------------------------------------
+// Persistent (warm) socket — shared across file switches.
+// Reconnecting the WebSocket on every navigation is the main source of the
+// "blink": each switch paid for a fresh handshake + auth + room join before
+// any content could appear. Keeping one connection alive and just switching
+// rooms makes switching feel instant.
+// ---------------------------------------------------------------------------
+let sharedSocket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null;
+let sharedSocketToken: string | null = null;
+
+function getSharedSocket(token: string): Socket<ServerToClientEvents, ClientToServerEvents> {
+  // If the auth token changed (e.g. re-login), drop the old socket.
+  if (sharedSocket && sharedSocketToken !== token) {
+    sharedSocket.disconnect();
+    sharedSocket = null;
+  }
+  if (!sharedSocket) {
+    sharedSocket = io(SERVER_URL, {
+      auth: { token },
+      transports: ["websocket"],
+    });
+    sharedSocketToken = token;
+  }
+  return sharedSocket;
+}
+
+// ---------------------------------------------------------------------------
+// One Y.Doc cached per document id. This guarantees content never bleeds
+// between files, and means revisiting a file is instant (its CRDT state is
+// already in memory, so there's nothing to re-fetch and nothing to flash).
+// ---------------------------------------------------------------------------
+const docCache = new Map<string, { doc: Y.Doc; ytext: Y.Text }>();
+
+function getDocEntry(docId: string): { doc: Y.Doc; ytext: Y.Text } {
+  let entry = docCache.get(docId);
+  if (!entry) {
+    const doc = new Y.Doc();
+    entry = { doc, ytext: doc.getText("monaco") };
+    docCache.set(docId, entry);
+  }
+  return entry;
+}
+
 export function useYjsSync(docId: string) {
   const { token, user } = useAuth();
-  
-  // Yjs State
-  const [doc] = useState(() => new Y.Doc());
-  const [ytext] = useState(() => doc.getText("monaco"));
-  
-  // Awareness State (y-protocols)
-  const [awareness] = useState(() => new Awareness(doc));
-  
+
+  // Per-document Yjs state (stable for a given docId, recreated when it changes).
+  const { doc, ytext } = useMemo(() => getDocEntry(docId), [docId]);
+
+  // Awareness is per-document (cursors/presence belong to the open file).
+  const awareness = useMemo(() => new Awareness(doc), [doc]);
+
   // React State
   const [isConnected, setIsConnected] = useState(false);
   const [isSynced, setIsSynced] = useState(false);
@@ -41,6 +83,10 @@ export function useYjsSync(docId: string) {
   useEffect(() => {
     if (!token || !user) return;
 
+    // Reuse the warm, shared socket instead of opening a new one per file.
+    const sock = getSharedSocket(token);
+    setSocket(sock);
+
     // Set local awareness state
     awareness.setLocalStateField("user", {
       name: user.displayName,
@@ -48,77 +94,63 @@ export function useYjsSync(docId: string) {
       colorLight: getUserColor(user.id) // y-codemirror.next uses this for cursor selection
     });
 
-    // 1. Initialize Socket.io connection
-    const newSocket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
-      auth: { token },
-      transports: ["websocket"],
-    });
-    
-    setSocket(newSocket);
+    // If this document's CRDT state is already in memory (revisiting a file),
+    // treat it as synced immediately so the editor shows content with no flash.
+    if (ytext.length > 0) {
+      setIsSynced(true);
+    }
 
-    newSocket.on("connect", () => {
+    // Join the document room (works whether the socket is already connected
+    // or connects in a moment).
+    const joinRoom = () => {
       setIsConnected(true);
       setError(null);
-      
-      // 2. Join the document room
-      newSocket.emit("doc:join", docId, (response) => {
+      sock.emit("doc:join", docId, (response) => {
         if (!response.success) {
           setError(response.error || "Failed to join document");
         } else {
-          // Send initial awareness state
           const update = encodeAwarenessUpdate(awareness, [awareness.clientID]);
-          newSocket.emit("sync:awareness", docId, update);
+          sock.emit("sync:awareness", docId, update);
         }
       });
-    });
+    };
 
-    newSocket.on("disconnect", () => {
+    const handleConnect = () => joinRoom();
+    const handleDisconnect = () => {
       setIsConnected(false);
       setIsSynced(false);
-    });
-
-    newSocket.on("connect_error", (err) => {
+    };
+    const handleConnectError = (err: Error) => {
       setError(`Connection error: ${err.message}`);
       setIsConnected(false);
-    });
+    };
 
-    // 3. Document Sync
-    newSocket.on("doc:loaded", (stateBuffer) => {
-      const state = new Uint8Array(stateBuffer);
-      Y.applyUpdate(doc, state, "server");
+    const handleDocLoaded = (stateBuffer: Uint8Array) => {
+      Y.applyUpdate(doc, new Uint8Array(stateBuffer), "server");
       setIsSynced(true);
-    });
-
-    newSocket.on("sync:update", (updateBuffer) => {
-      const update = new Uint8Array(updateBuffer);
-      Y.applyUpdate(doc, update, "server");
-    });
+    };
+    const handleSyncUpdate = (updateBuffer: Uint8Array) => {
+      Y.applyUpdate(doc, new Uint8Array(updateBuffer), "server");
+    };
+    const handleRemoteAwareness = (updateBuffer: Uint8Array) => {
+      applyAwarenessUpdate(awareness, new Uint8Array(updateBuffer), "remote");
+    };
 
     const handleYjsUpdate = (update: Uint8Array, origin: any) => {
       if (origin !== "server") {
-        newSocket.emit("sync:update", docId, update);
+        sock.emit("sync:update", docId, update);
       }
     };
-    doc.on("update", handleYjsUpdate);
-
-    // 4. Awareness Sync
-    newSocket.on("sync:awareness", (updateBuffer) => {
-      const update = new Uint8Array(updateBuffer);
-      applyAwarenessUpdate(awareness, update, "remote");
-    });
-
     const handleAwarenessUpdate = ({ added, updated, removed }: any, origin: any) => {
       if (origin === "local") {
         const changedClients = added.concat(updated, removed);
         const update = encodeAwarenessUpdate(awareness, changedClients);
-        newSocket.emit("sync:awareness", docId, update);
+        sock.emit("sync:awareness", docId, update);
       }
-      
-      // Update local React state for the PresenceBar
+
       const users = new Map<string, PresenceUser>();
       awareness.getStates().forEach((state, clientId) => {
         if (state.user) {
-          // Use clientId as the unique key for cursors
           users.set(clientId.toString(), {
             id: clientId.toString(),
             displayName: state.user.name,
@@ -128,17 +160,35 @@ export function useYjsSync(docId: string) {
       });
       setActiveUsers(users);
     };
-    
+
+    sock.on("connect", handleConnect);
+    sock.on("disconnect", handleDisconnect);
+    sock.on("connect_error", handleConnectError);
+    sock.on("doc:loaded", handleDocLoaded);
+    sock.on("sync:update", handleSyncUpdate);
+    sock.on("sync:awareness", handleRemoteAwareness);
+    doc.on("update", handleYjsUpdate);
     awareness.on("update", handleAwarenessUpdate);
 
+    // Socket may already be connected (warm) — join right away.
+    if (sock.connected) {
+      joinRoom();
+    }
+
     return () => {
+      // Detach only this file's handlers; keep the socket warm for the next file.
       doc.off("update", handleYjsUpdate);
       awareness.off("update", handleAwarenessUpdate);
-      newSocket.emit("doc:leave", docId);
-      newSocket.disconnect();
+      sock.off("connect", handleConnect);
+      sock.off("disconnect", handleDisconnect);
+      sock.off("connect_error", handleConnectError);
+      sock.off("doc:loaded", handleDocLoaded);
+      sock.off("sync:update", handleSyncUpdate);
+      sock.off("sync:awareness", handleRemoteAwareness);
+      sock.emit("doc:leave", docId);
       awareness.destroy();
     };
-  }, [docId, token, user, doc, awareness]);
+  }, [docId, token, user, doc, awareness, ytext]);
 
   return { doc, ytext, awareness, isConnected, isSynced, error, activeUsers, socket };
 }
