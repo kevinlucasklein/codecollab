@@ -1,8 +1,64 @@
 import { Router } from "express";
+import { Octokit } from "octokit";
 import { query } from "../db/index.js";
 import { authenticate } from "../middleware/auth.js";
 
 export const foldersRouter: ReturnType<typeof Router> = Router();
+
+// Result of attempting to add a user as a GitHub repo collaborator.
+type GithubInviteStatus = "invited" | "already" | "not_linked" | "no_owner_github" | "failed";
+
+// Ensure we know the target user's GitHub login; backfill it from their token
+// if we stored a token but not a login (e.g. connected before this feature).
+async function resolveGithubLogin(targetUserId: string): Promise<string | null> {
+  const r = await query("SELECT github_login, github_access_token FROM users WHERE id = $1", [targetUserId]);
+  if (r.rows.length === 0) return null;
+  let { github_login: login, github_access_token: token } = r.rows[0];
+  if (login) return login;
+  if (!token) return null;
+  try {
+    const res = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" },
+    });
+    const data: any = await res.json();
+    if (data?.login) {
+      await query("UPDATE users SET github_login = $1 WHERE id = $2", [data.login, targetUserId]);
+      return data.login;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+// Invite a user as a write-access collaborator on the repo, using the folder
+// owner's GitHub token. Best-effort: returns a status, never throws.
+async function inviteRepoCollaborator(ownerUserId: string, targetUserId: string, repo: string): Promise<GithubInviteStatus> {
+  const ownerRow = await query("SELECT github_access_token FROM users WHERE id = $1", [ownerUserId]);
+  const ownerToken = ownerRow.rows[0]?.github_access_token;
+  if (!ownerToken) return "no_owner_github";
+
+  const login = await resolveGithubLogin(targetUserId);
+  if (!login) return "not_linked";
+
+  const [owner, repoName] = repo.split("/");
+  if (!owner || !repoName) return "failed";
+
+  try {
+    const octokit = new Octokit({ auth: ownerToken });
+    const resp = await octokit.rest.repos.addCollaborator({
+      owner,
+      repo: repoName,
+      username: login,
+      permission: "push",
+    });
+    // 201 => invitation created; 204 => already a collaborator (no body).
+    return resp.status === 204 ? "already" : "invited";
+  } catch (e: any) {
+    console.error("addCollaborator failed:", e?.status, e?.message);
+    return "failed";
+  }
+}
 
 foldersRouter.use(authenticate);
 
@@ -58,11 +114,12 @@ foldersRouter.get("/shares", async (req, res) => {
 // POST /api/folders/shares  { repo, branch, email, permission }
 foldersRouter.post("/shares", async (req, res) => {
   const userId = req.user!.id;
-  const { repo, branch = "", email, permission = "editor" } = req.body as {
+  const { repo, branch = "", email, permission = "editor", addGithubCollaborator = false } = req.body as {
     repo?: string;
     branch?: string;
     email?: string;
     permission?: string;
+    addGithubCollaborator?: boolean;
   };
 
   if (!repo || !email) return res.status(400).json({ success: false, error: "Missing repo or email" });
@@ -92,9 +149,15 @@ foldersRouter.post("/shares", async (req, res) => {
       [userId, repo, branch, target.id, permission]
     );
 
+    // Optionally invite them to push directly on GitHub (repo-level write).
+    let githubInvite: GithubInviteStatus | undefined;
+    if (addGithubCollaborator) {
+      githubInvite = await inviteRepoCollaborator(userId, target.id, repo);
+    }
+
     return res.status(201).json({
       success: true,
-      data: { userId: target.id, email: target.email, displayName: target.display_name, permission },
+      data: { userId: target.id, email: target.email, displayName: target.display_name, permission, githubInvite },
     });
   } catch (error) {
     console.error("Failed to add folder share:", error);

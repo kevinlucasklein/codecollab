@@ -171,8 +171,25 @@ authRouter.get("/github/callback", async (req, res) => {
     const tokenData: any = await tokenRes.json();
 
     if (tokenData.access_token) {
+      // Also fetch the GitHub login so we can later invite this user as a repo
+      // collaborator (best-effort; failure here shouldn't block connecting).
+      let githubLogin: string | null = null;
+      try {
+        const ghUserRes = await fetch("https://api.github.com/user", {
+          headers: { Authorization: `Bearer ${tokenData.access_token}`, Accept: "application/vnd.github+json" },
+        });
+        const ghUser: any = await ghUserRes.json();
+        githubLogin = ghUser?.login ?? null;
+      } catch (e) {
+        console.error("Failed to fetch GitHub login:", e);
+      }
+
       // Save to database
-      await query("UPDATE users SET github_access_token = $1 WHERE id = $2", [tokenData.access_token, userId]);
+      await query("UPDATE users SET github_access_token = $1, github_login = $2 WHERE id = $3", [
+        tokenData.access_token,
+        githubLogin,
+        userId,
+      ]);
       return res.redirect(`${FRONTEND_URL}?github_connected=true`);
     } else {
       console.error("GitHub Auth Error:", tokenData);

@@ -46,8 +46,12 @@ CREATE INDEX IF NOT EXISTS idx_comments_thread_id ON comments(thread_id);
 
 -- Layer 4: GitHub Integration
 
-ALTER TABLE users 
+ALTER TABLE users
 ADD COLUMN IF NOT EXISTS github_access_token VARCHAR(255);
+
+-- GitHub username/login, needed to invite a user as a repo collaborator.
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS github_login VARCHAR(255);
 
 ALTER TABLE documents
 ADD COLUMN IF NOT EXISTS github_repo VARCHAR(255),

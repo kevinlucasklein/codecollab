@@ -26,6 +26,7 @@ export function ShareDialog({ target, shareLink, onClose }: ShareDialogProps) {
   const [permission, setPermission] = useState<SharePermission>("editor");
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [addGithubCollaborator, setAddGithubCollaborator] = useState(false);
 
   const listUrl =
     target.kind === "file"
@@ -60,7 +61,7 @@ export function ShareDialog({ target, shareLink, onClose }: ShareDialogProps) {
       const body =
         target.kind === "file"
           ? JSON.stringify({ email: email.trim(), permission })
-          : JSON.stringify({ repo: target.repo, branch: target.branch, email: email.trim(), permission });
+          : JSON.stringify({ repo: target.repo, branch: target.branch, email: email.trim(), permission, addGithubCollaborator });
       const url =
         target.kind === "file"
           ? `${SERVER_URL}/api/documents/${target.docId}/shares`
@@ -74,6 +75,14 @@ export function ShareDialog({ target, shareLink, onClose }: ShareDialogProps) {
         });
         setEmail("");
         toast.success("Access granted");
+
+        // Surface the GitHub collaborator-invite outcome, if requested.
+        const invite = data.data.githubInvite as string | undefined;
+        if (invite === "invited") toast.success("GitHub invite sent — they can push once they accept");
+        else if (invite === "already") toast("Already a collaborator on the GitHub repo");
+        else if (invite === "not_linked") toast("They haven't linked GitHub — someone with write access must push for them", { duration: 6000 });
+        else if (invite === "no_owner_github") toast.error("Connect your GitHub to invite repo collaborators");
+        else if (invite === "failed") toast.error("Couldn't add them on GitHub (you may lack admin on the repo)", { duration: 6000 });
       } else {
         toast.error(data.error || "Failed to share");
       }
@@ -155,22 +164,37 @@ export function ShareDialog({ target, shareLink, onClose }: ShareDialogProps) {
           </button>
         </div>
 
-        <form onSubmit={addShare} style={{ display: "flex", gap: 8, padding: "16px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <input
-            type="email"
-            placeholder="Add people by email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={input}
-            required
-          />
-          <select value={permission} onChange={(e) => setPermission(e.target.value as SharePermission)} style={select}>
-            <option value="editor">Editor</option>
-            <option value="viewer">Viewer</option>
-          </select>
-          <button type="submit" disabled={submitting} style={primaryBtn}>
-            {submitting ? "Adding..." : "Add"}
-          </button>
+        <form onSubmit={addShare} style={{ display: "flex", flexDirection: "column", gap: 10, padding: "16px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="email"
+              placeholder="Add people by email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={input}
+              required
+            />
+            <select value={permission} onChange={(e) => setPermission(e.target.value as SharePermission)} style={select}>
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+            </select>
+            <button type="submit" disabled={submitting} style={primaryBtn}>
+              {submitting ? "Adding..." : "Add"}
+            </button>
+          </div>
+          {target.kind === "folder" && (
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.8rem", color: "#8b949e", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={addGithubCollaborator}
+                onChange={(e) => setAddGithubCollaborator(e.target.checked)}
+                style={{ marginTop: 2 }}
+              />
+              <span>
+                Also invite them to the GitHub repo so they can push directly (grants <strong>write access to the whole repo</strong>). They must have GitHub linked; otherwise someone with write access pushes for them.
+              </span>
+            </label>
+          )}
         </form>
 
         <div style={{ maxHeight: 280, overflowY: "auto", padding: "8px 16px" }}>
