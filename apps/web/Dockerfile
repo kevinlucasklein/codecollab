@@ -24,8 +24,8 @@ ARG NEXT_PUBLIC_SERVER_URL
 ENV NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL
 
 # Build shared package first, then web
-RUN pnpm --filter @codecollab/shared build
-RUN pnpm --filter @codecollab/web build
+RUN pnpm --filter @gitlive/shared build
+RUN pnpm --filter @gitlive/web build
 
 # Production stage — use Next.js standalone output
 FROM node:20-slim AS runner
