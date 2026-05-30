@@ -94,6 +94,40 @@ authRouter.post("/login", async (req, res) => {
 });
 
 // ----------------------------------------------------------------------------
+// POST /api/auth/guest
+// ----------------------------------------------------------------------------
+authRouter.post("/guest", async (req, res) => {
+  try {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const email = `guest-${Date.now()}-${randomSuffix}@guest.codecollab.local`;
+    const displayName = `Guest-${randomSuffix}`;
+    const password = Math.random().toString(36).slice(-10);
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const result = await query(
+      "INSERT INTO users (email, password, display_name) VALUES ($1, $2, $3) RETURNING id, email, display_name, created_at",
+      [email, hashedPassword, displayName]
+    );
+
+    const user: User = {
+      id: result.rows[0].id,
+      email: result.rows[0].email,
+      displayName: result.rows[0].display_name,
+      createdAt: result.rows[0].created_at,
+    };
+
+    const token = jwt.sign(user, JWT_SECRET, { expiresIn: "1d" }); // Guests expire sooner
+
+    return res.status(201).json({ success: true, data: { user, token } });
+  } catch (error) {
+    console.error("Guest login error:", error);
+    return res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+// ----------------------------------------------------------------------------
 // GET /api/auth/me
 // ----------------------------------------------------------------------------
 authRouter.get("/me", authenticate, async (req, res) => {

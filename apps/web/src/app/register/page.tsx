@@ -6,7 +6,7 @@ import { useAuth } from "../../lib/auth";
 import styles from "../auth.module.css";
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { register, loginAsGuest } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -23,6 +23,18 @@ export default function RegisterPage() {
     } catch (err: any) {
       setError(err.message || "Failed to register");
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await loginAsGuest();
+    } catch (err: any) {
+      setError(err.message || "Failed to login as guest");
       setIsLoading(false);
     }
   };
@@ -82,6 +94,19 @@ export default function RegisterPage() {
             {isLoading ? "Creating account..." : "Sign Up"}
           </button>
         </form>
+
+        <div className={styles.divider}>
+          <span>or</span>
+        </div>
+
+        <button 
+          type="button" 
+          className={`${styles.button} ${styles.guestButton}`} 
+          onClick={handleGuestLogin} 
+          disabled={isLoading}
+        >
+          Continue as Guest
+        </button>
 
         <div className={styles.footer}>
           Already have an account?{" "}

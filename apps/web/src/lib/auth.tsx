@@ -10,6 +10,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
+  loginAsGuest: () => Promise<void>;
   logout: () => void;
 }
 
@@ -94,6 +95,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/");
   };
 
+  const loginAsGuest = async () => {
+    const res = await fetch(`${SERVER_URL}/api/auth/guest`, {
+      method: "POST",
+    });
+    
+    const data: ApiResponse<AuthPayload> = await res.json();
+    
+    if (!res.ok || !data.success || !data.data) {
+      throw new Error(data.error || "Guest login failed");
+    }
+
+    localStorage.setItem("codecollab_token", data.data.token);
+    setToken(data.data.token);
+    setUser(data.data.user);
+    router.push("/");
+  };
+
   const logout = () => {
     localStorage.removeItem("codecollab_token");
     setToken(null);
@@ -102,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, loginAsGuest, logout }}>
       {children}
     </AuthContext.Provider>
   );
