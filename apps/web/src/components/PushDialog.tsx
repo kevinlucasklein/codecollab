@@ -17,6 +17,7 @@ interface PushResult {
   branch?: string;
   commitSha?: string;
   pushedFiles: string[];
+  coAuthors?: number;
   branchUrl?: string;
   compareUrl?: string;
   message?: string;
@@ -98,6 +99,11 @@ export function PushDialog({ folder, onClose }: PushDialogProps) {
                   <Check size={18} /> Pushed {result.pushedFiles.length} file(s) to{" "}
                   <code style={code}>{result.branch}</code>
                 </div>
+                {!!result.coAuthors && result.coAuthors > 0 && (
+                  <div style={{ fontSize: "0.8rem", color: "#8b949e", marginBottom: 10 }}>
+                    Credited {result.coAuthors} co-author{result.coAuthors > 1 ? "s" : ""} on the commit.
+                  </div>
+                )}
                 <div style={{ maxHeight: 160, overflowY: "auto", fontSize: "0.8rem", fontFamily: "monospace", color: "#8b949e", marginBottom: 12 }}>
                   {result.pushedFiles.map((f) => (
                     <div key={f}>{f}</div>

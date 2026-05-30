@@ -53,6 +53,20 @@ ADD COLUMN IF NOT EXISTS github_access_token VARCHAR(255);
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS github_login VARCHAR(255);
 
+-- GitHub numeric id, used to build the noreply email GitHub uses to attribute
+-- commits/co-authors to a user account.
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS github_id BIGINT;
+
+-- Tracks which users have contributed edits to a document since the last push,
+-- so pushes can credit them via Co-authored-by trailers.
+CREATE TABLE IF NOT EXISTS doc_contributors (
+  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (document_id, user_id)
+);
+
 ALTER TABLE documents
 ADD COLUMN IF NOT EXISTS github_repo VARCHAR(255),
 ADD COLUMN IF NOT EXISTS github_branch VARCHAR(255),

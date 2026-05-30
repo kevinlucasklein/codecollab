@@ -172,7 +172,7 @@ githubRouter.post("/push", async (req, res) => {
 
     // 2. Gather the folder's documents and compute which ones changed.
     const docsRes = await query(
-      `SELECT github_file_path, yjs_state, base_content
+      `SELECT id, github_file_path, yjs_state, base_content
        FROM documents
        WHERE owner_id = $1 AND github_repo = $2 AND COALESCE(github_branch, '') = COALESCE($3, '')
          AND github_file_path IS NOT NULL`,
@@ -180,15 +180,38 @@ githubRouter.post("/push", async (req, res) => {
     );
 
     const changed: { path: string; content: string }[] = [];
+    const changedDocIds: string[] = [];
     for (const row of docsRes.rows) {
       const text = currentDocText(row.yjs_state ?? null, row.base_content ?? null);
       if (text !== (row.base_content ?? "")) {
         changed.push({ path: row.github_file_path, content: text });
+        changedDocIds.push(row.id);
       }
     }
 
     if (changed.length === 0) {
       return res.json({ success: true, data: { pushedFiles: [], message: "No changes to push" } });
+    }
+
+    // 2b. Gather contributors across the changed files and build Co-authored-by
+    // trailers, so GitHub credits everyone who collaborated (not just the
+    // pusher). Map to the GitHub noreply email when we know their account.
+    const coAuthors = await query(
+      `SELECT DISTINCT u.id, u.display_name, u.email, u.github_login, u.github_id
+       FROM doc_contributors dc JOIN users u ON u.id = dc.user_id
+       WHERE dc.document_id = ANY($1::uuid[])`,
+      [changedDocIds]
+    );
+
+    const trailers: string[] = [];
+    for (const c of coAuthors.rows) {
+      if (c.id === userId) continue; // the pusher is the commit author already
+      const name = c.github_login || c.display_name;
+      const email =
+        c.github_id && c.github_login
+          ? `${c.github_id}+${c.github_login}@users.noreply.github.com`
+          : c.email;
+      trailers.push(`Co-authored-by: ${name} <${email}>`);
     }
 
     const octokit = new Octokit({ auth: req.user!.githubAccessToken });
@@ -230,10 +253,15 @@ githubRouter.post("/push", async (req, res) => {
     });
 
     // 5. Create the commit and point the branch at it.
+    // Co-authored-by trailers must be separated from the subject by a blank
+    // line, and each on its own line, for GitHub to recognize them.
+    const subject = commitMessage?.trim() || `Update ${changed.length} file(s) via CodeCollab`;
+    const fullMessage = trailers.length > 0 ? `${subject}\n\n${trailers.join("\n")}` : subject;
+
     const commit = await octokit.rest.git.createCommit({
       owner,
       repo: repoName,
-      message: commitMessage?.trim() || `Update ${changed.length} file(s) via CodeCollab`,
+      message: fullMessage,
       tree: newTree.data.sha,
       parents: [parentSha],
     });
@@ -254,12 +282,19 @@ githubRouter.post("/push", async (req, res) => {
       });
     }
 
+    // Changes are now on GitHub — reset contributor tracking for these files so
+    // the next push only credits people who edit from here on.
+    if (changedDocIds.length > 0) {
+      await query("DELETE FROM doc_contributors WHERE document_id = ANY($1::uuid[])", [changedDocIds]);
+    }
+
     return res.json({
       success: true,
       data: {
         branch: newBranch,
         commitSha: commit.data.sha,
         pushedFiles: changed.map((c) => c.path),
+        coAuthors: trailers.length,
         branchUrl: `https://github.com/${owner}/${repoName}/tree/${encodeURIComponent(newBranch)}`,
         compareUrl: `https://github.com/${owner}/${repoName}/compare/${encodeURIComponent(baseBranch)}...${encodeURIComponent(newBranch)}?expand=1`,
       },

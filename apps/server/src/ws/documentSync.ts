@@ -197,6 +197,9 @@ export function setupWebSocket(io: Server<ClientToServerEvents, ServerToClientEv
         return;
       }
 
+      // Credit this user as a contributor to the document.
+      recordContributor(docId, user.id);
+
       // Ensure updateBuffer is Uint8Array (socket.io might send it as a Buffer in Node)
       const update = new Uint8Array(updateBuffer);
 
@@ -359,4 +362,6 @@ async function saveDocToDatabase(docId: string, doc: Y.Doc) {
   } catch (error) {
     console.error(`Failed to save document ${docId} to database:`, error);
   }
+  // Persist contributors alongside the save.
+  await flushContributors(docId);
 }
