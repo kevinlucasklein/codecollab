@@ -255,7 +255,7 @@ githubRouter.post("/push", async (req, res) => {
     // 5. Create the commit and point the branch at it.
     // Co-authored-by trailers must be separated from the subject by a blank
     // line, and each on its own line, for GitHub to recognize them.
-    const subject = commitMessage?.trim() || `Update ${changed.length} file(s) via CodeCollab`;
+    const subject = commitMessage?.trim() || `Update ${changed.length} file(s) via GitLive`;
     const fullMessage = trailers.length > 0 ? `${subject}\n\n${trailers.join("\n")}` : subject;
 
     const commit = await octokit.rest.git.createCommit({

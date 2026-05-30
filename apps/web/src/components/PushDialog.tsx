@@ -26,13 +26,13 @@ interface PushResult {
 function suggestBranch(displayName: string | undefined): string {
   const slug = (displayName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const date = new Date().toISOString().slice(0, 10);
-  return `codecollab/${slug}-${date}`;
+  return `gitlive/${slug}-${date}`;
 }
 
 export function PushDialog({ folder, onClose }: PushDialogProps) {
   const { token, user } = useAuth();
   const [branch, setBranch] = useState(suggestBranch(user?.displayName));
-  const [message, setMessage] = useState("Update via CodeCollab");
+  const [message, setMessage] = useState("Update via GitLive");
   const [pushing, setPushing] = useState(false);
   const [result, setResult] = useState<PushResult | null>(null);
 

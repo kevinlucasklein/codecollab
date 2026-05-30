@@ -17,7 +17,7 @@ importers:
 
   apps/server:
     dependencies:
-      '@codecollab/shared':
+      '@gitlive/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       bcryptjs:
@@ -81,9 +81,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@codecollab/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@codemirror/commands':
         specifier: ^6.10.3
         version: 6.10.3
@@ -138,6 +135,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.0
         version: 6.43.0
+      '@gitlive/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       cm6-graphql:
         specifier: ^0.2.1
         version: 0.2.1(@codemirror/autocomplete@6.20.2)(@codemirror/language@6.12.3)(@codemirror/lint@6.9.6)(@codemirror/state@6.6.0)(@codemirror/view@6.43.0)(@lezer/highlight@1.2.3)(graphql@16.14.0)

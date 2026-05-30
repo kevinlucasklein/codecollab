@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { PresenceUser } from "@codecollab/shared";
+import type { PresenceUser } from "@gitlive/shared";
 import styles from "./editor.module.css";
 
 interface PresenceBarProps {

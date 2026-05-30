@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "../../../lib/auth";
 import { lineDiff, diffStats } from "../../../lib/lineDiff";
 import { fileHrefInFolder } from "../../../lib/folderLink";
-import type { Review, ReviewFile } from "@codecollab/shared";
+import type { Review, ReviewFile } from "@gitlive/shared";
 import toast from "react-hot-toast";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";

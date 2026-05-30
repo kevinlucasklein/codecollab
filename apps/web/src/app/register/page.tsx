@@ -44,7 +44,7 @@ export default function RegisterPage() {
       <div className={styles.authCard}>
         <div className={styles.header}>
           <h1 className={styles.title}>Create an account</h1>
-          <p className={styles.subtitle}>Join CodeCollab to start collaborating</p>
+          <p className={styles.subtitle}>Join GitLive to start collaborating</p>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>

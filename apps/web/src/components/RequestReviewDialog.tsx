@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuth } from "../lib/auth";
 import type { FolderContext } from "../lib/folderLink";
-import type { ShareEntry } from "@codecollab/shared";
+import type { ShareEntry } from "@gitlive/shared";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
 
@@ -17,7 +17,7 @@ interface RequestReviewDialogProps {
 
 function suggestBranch(displayName: string | undefined): string {
   const slug = (displayName || "user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  return `codecollab/${slug}-${new Date().toISOString().slice(0, 10)}`;
+  return `gitlive/${slug}-${new Date().toISOString().slice(0, 10)}`;
 }
 
 export function RequestReviewDialog({ folder, onClose }: RequestReviewDialogProps) {

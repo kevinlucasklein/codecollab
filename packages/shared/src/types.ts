@@ -1,4 +1,4 @@
-// CodeCollab — Shared Types
+// GitLive — Shared Types
 // Used by both frontend and backend
 
 // User & Auth

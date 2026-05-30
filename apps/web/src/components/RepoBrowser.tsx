@@ -211,7 +211,7 @@ export default function RepoBrowser({ token, onClose }: RepoBrowserProps) {
           {loading ? (
             <div className={styles.loading}>Loading from GitHub...</div>
           ) : step === "importing" ? (
-            <div className={styles.loading}>Importing to CodeCollab...</div>
+            <div className={styles.loading}>Importing to GitLive...</div>
           ) : step === "bulk_importing" ? (
             <div className={styles.loading}>
               <div style={{ marginBottom: 12 }}>Importing {bulkProgress.current} / {bulkProgress.total} files...</div>

@@ -3,7 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "CodeCollab — Real-Time Collaborative Code Review",
+  title: "GitLive — Real-Time Collaborative Code Review",
   description:
     "Review code together in real time. Live editing, line-level comments, and presence — like Google Docs for code review.",
 };

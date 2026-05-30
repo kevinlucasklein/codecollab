@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { query } from "../db/index.js";
 import { authenticate } from "../middleware/auth.js";
-import type { CommentThread, Comment } from "@codecollab/shared";
+import type { CommentThread, Comment } from "@gitlive/shared";
 
 // We use mergeParams so we can access :documentId from the parent router
 export const commentsRouter: ReturnType<typeof Router> = Router({ mergeParams: true });

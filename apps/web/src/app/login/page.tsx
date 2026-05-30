@@ -43,7 +43,7 @@ export default function LoginPage() {
       <div className={styles.authCard}>
         <div className={styles.header}>
           <h1 className={styles.title}>Welcome back</h1>
-          <p className={styles.subtitle}>Sign in to continue to CodeCollab</p>
+          <p className={styles.subtitle}>Sign in to continue to GitLive</p>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>

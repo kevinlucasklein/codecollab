@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import type { User, LoginInput, RegisterInput, AuthPayload, ApiResponse } from "@codecollab/shared";
+import type { User, LoginInput, RegisterInput, AuthPayload, ApiResponse } from "@gitlive/shared";
 import { useRouter } from "next/navigation";
 
 interface AuthContextType {
@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load token from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem("codecollab_token");
+    const storedToken = localStorage.getItem("gitlive_token");
     if (storedToken) {
       setToken(storedToken);
       fetchMe(storedToken);
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.data);
       } else {
         // Token is invalid/expired
-        localStorage.removeItem("codecollab_token");
+        localStorage.removeItem("gitlive_token");
         setToken(null);
         setUser(null);
       }
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(data.error || "Login failed");
     }
 
-    localStorage.setItem("codecollab_token", data.data.token);
+    localStorage.setItem("gitlive_token", data.data.token);
     setToken(data.data.token);
     setUser(data.data.user);
     router.push("/");
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(data.error || "Registration failed");
     }
 
-    localStorage.setItem("codecollab_token", data.data.token);
+    localStorage.setItem("gitlive_token", data.data.token);
     setToken(data.data.token);
     setUser(data.data.user);
     router.push("/");
@@ -106,14 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(data.error || "Guest login failed");
     }
 
-    localStorage.setItem("codecollab_token", data.data.token);
+    localStorage.setItem("gitlive_token", data.data.token);
     setToken(data.data.token);
     setUser(data.data.user);
     router.push("/");
   };
 
   const logout = () => {
-    localStorage.removeItem("codecollab_token");
+    localStorage.removeItem("gitlive_token");
     setToken(null);
     setUser(null);
     router.push("/login");

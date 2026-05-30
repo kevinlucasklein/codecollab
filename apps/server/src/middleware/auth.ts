@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import type { User } from "@codecollab/shared";
+import type { User } from "@gitlive/shared";
 
 // Extend Express Request to include our User
 declare global {

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
-import type { Document, Review } from "@codecollab/shared";
+import type { Document, Review } from "@gitlive/shared";
 import { getFileIconMeta } from "../lib/fileIcons";
 import { folderKey, folderContextFromDoc, fileHrefInFolder, folderQuery } from "../lib/folderLink";
 import { Pencil, Share2, Trash2, Folder, FolderOpen, ChevronRight, ChevronDown, ExternalLink } from "lucide-react";
@@ -430,7 +430,7 @@ export default function DashboardPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <div className={styles.logo}>CodeCollab</div>
+          <div className={styles.logo}>GitLive</div>
           <div className={styles.userSection}>
             <span className={styles.userName}>{user.displayName}</span>
             <button onClick={logout} className={styles.logoutButton}>

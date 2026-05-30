@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool, query } from "../db/index.js"; // Note the .js extension for ES modules
 import { authenticate } from "../middleware/auth.js";
-import type { RegisterInput, LoginInput, User } from "@codecollab/shared";
+import type { RegisterInput, LoginInput, User } from "@gitlive/shared";
 
 export const authRouter: ReturnType<typeof Router> = Router();
 
@@ -99,7 +99,7 @@ authRouter.post("/login", async (req, res) => {
 authRouter.post("/guest", async (req, res) => {
   try {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const email = `guest-${Date.now()}-${randomSuffix}@guest.codecollab.local`;
+    const email = `guest-${Date.now()}-${randomSuffix}@guest.gitlive.local`;
     const displayName = `Guest-${randomSuffix}`;
     const password = Math.random().toString(36).slice(-10);
 

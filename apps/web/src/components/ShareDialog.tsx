@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { X, Trash2, Link2, Check } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../lib/auth";
-import type { ShareEntry, SharePermission } from "@codecollab/shared";
+import type { ShareEntry, SharePermission } from "@gitlive/shared";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
 

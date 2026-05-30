@@ -1,4 +1,4 @@
-import type { Document } from "@codecollab/shared";
+import type { Document } from "@gitlive/shared";
 
 // A "folder" is a group of documents that share the same owner, GitHub repo,
 // and branch (e.g. an entire branch imported at once).

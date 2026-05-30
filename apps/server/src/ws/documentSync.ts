@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 import * as Y from "yjs";
 import jwt from "jsonwebtoken";
 import { pool, query } from "../db/index.js";
-import type { ClientToServerEvents, ServerToClientEvents, User, PresenceUser, FolderPresenceEntry } from "@codecollab/shared";
+import type { ClientToServerEvents, ServerToClientEvents, User, PresenceUser, FolderPresenceEntry } from "@gitlive/shared";
 
 const JWT_SECRET = process.env.JWT_SECRET || "change-me-in-production-use-a-long-random-string";
 

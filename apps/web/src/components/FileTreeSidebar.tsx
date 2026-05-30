@@ -6,7 +6,7 @@ import { Folder, FolderOpen, FileText, ChevronRight, ChevronDown } from 'lucide-
 import { getFileIconMeta } from '../lib/fileIcons';
 import { useAuth } from '../lib/auth';
 import { fileHrefInFolder, type FolderContext } from '../lib/folderLink';
-import type { Document, PresenceUser } from '@codecollab/shared';
+import type { Document, PresenceUser } from '@gitlive/shared';
 import styles from './fileTreeSidebar.module.css';
 
 interface FileTreeSidebarProps {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { CommentThread, Comment, ServerToClientEvents, ClientToServerEvents } from "@codecollab/shared";
+import type { CommentThread, Comment, ServerToClientEvents, ClientToServerEvents } from "@gitlive/shared";
 import { Socket } from "socket.io-client";
 import { useAuth } from "../lib/auth";
 

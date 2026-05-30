@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { CommentThread } from "@codecollab/shared";
+import type { CommentThread } from "@gitlive/shared";
 import styles from "./commentSidebar.module.css";
 
 interface CommentSidebarProps {

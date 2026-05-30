@@ -115,7 +115,7 @@ export async function pushFiles(
 
   const newTree = await octokit.rest.git.createTree({ owner, repo: repoName, base_tree: baseTreeSha, tree: treeItems });
 
-  const subject = commitMessage?.trim() || `Update ${changed.length} file(s) via CodeCollab`;
+  const subject = commitMessage?.trim() || `Update ${changed.length} file(s) via GitLive`;
   const fullMessage = trailers.length > 0 ? `${subject}\n\n${trailers.join("\n")}` : subject;
 
   const commit = await octokit.rest.git.createCommit({

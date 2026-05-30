@@ -1,5 +1,5 @@
 {
-  "name": "@codecollab/web",
+  "name": "@gitlive/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@codecollab/shared": "workspace:*",
+    "@gitlive/shared": "workspace:*",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/lang-cpp": "^6.0.3",
     "@codemirror/lang-css": "^6.3.1",

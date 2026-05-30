@@ -17,7 +17,7 @@ import { RequestReviewDialog } from "../../../components/RequestReviewDialog";
 import type { FolderContext } from "../../../lib/folderLink";
 import { Sidebar, GitBranch, GitPullRequest } from "lucide-react";
 import styles from "../../../components/editor.module.css";
-import type { Document, PresenceUser, FolderPresenceEntry } from "@codecollab/shared";
+import type { Document, PresenceUser, FolderPresenceEntry } from "@gitlive/shared";
 import toast from "react-hot-toast";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";

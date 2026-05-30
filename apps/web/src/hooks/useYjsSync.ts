@@ -6,7 +6,7 @@ import type {
   ServerToClientEvents, 
   ClientToServerEvents, 
   PresenceUser 
-} from "@codecollab/shared";
+} from "@gitlive/shared";
 import { useAuth } from "../lib/auth";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";

@@ -1,6 +1,6 @@
-# CodeCollab
+# GitLive
 
-CodeCollab is a real-time collaborative code review and editing platform. Built with modern web technologies, it allows multiple developers to edit code simultaneously, add line-level comments, and synchronize directly with GitHub repositories—all with zero merge conflicts thanks to CRDTs (Conflict-free Replicated Data Types).
+GitLive is a real-time collaborative code review and editing platform. Built with modern web technologies, it allows multiple developers to edit code simultaneously, add line-level comments, and synchronize directly with GitHub repositories—all with zero merge conflicts thanks to CRDTs (Conflict-free Replicated Data Types).
 
 ## 🚀 Features
 
@@ -13,7 +13,7 @@ CodeCollab is a real-time collaborative code review and editing platform. Built 
 
 ## 🏗️ Architecture & Tech Stack
 
-CodeCollab is structured as a **Turborepo** monorepo to cleanly separate frontend and backend environments while sharing TypeScript types and configurations.
+GitLive is structured as a **Turborepo** monorepo to cleanly separate frontend and backend environments while sharing TypeScript types and configurations.
 
 - **Frontend (`apps/web`)**: 
   - **Framework**: Next.js 15 (App Router), React 19
@@ -44,8 +44,8 @@ CodeCollab is structured as a **Turborepo** monorepo to cleanly separate fronten
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/codecollab.git
-   cd codecollab
+   git clone https://github.com/yourusername/gitlive.git
+   cd gitlive
    ```
 
 2. Install dependencies:
@@ -72,7 +72,7 @@ CodeCollab is structured as a **Turborepo** monorepo to cleanly separate fronten
 
 ## 🧪 Testing
 
-CodeCollab maintains a strong focus on correctness and engineering rigor.
+GitLive maintains a strong focus on correctness and engineering rigor.
 
 - **Unit & Integration Tests**: Built with **Vitest** and **Supertest** to thoroughly test the REST API, Authentication flows, Document CRUD operations, and Yjs utility functions.
 - Run tests across all packages:
@@ -82,7 +82,7 @@ CodeCollab maintains a strong focus on correctness and engineering rigor.
 
 ## 🧠 Why Yjs / CRDTs?
 
-Traditional "last-write-wins" algorithms or Operational Transformation (OT) can be complex and error-prone when scaling collaborative tools. By using **Yjs**, a mature CRDT implementation, CodeCollab ensures:
+Traditional "last-write-wins" algorithms or Operational Transformation (OT) can be complex and error-prone when scaling collaborative tools. By using **Yjs**, a mature CRDT implementation, GitLive ensures:
 - Mathematical guarantees that all clients will eventually converge to the exact same state.
 - Efficient binary encoding for fast network transport and compact database storage.
 - First-class support for CodeMirror 6 integration and presence awareness.

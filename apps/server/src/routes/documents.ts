@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { pool, query } from "../db/index.js";
 import { authenticate } from "../middleware/auth.js";
-import type { Document } from "@codecollab/shared";
+import type { Document } from "@gitlive/shared";
 import { Octokit } from "octokit";
 
 export const documentsRouter: ReturnType<typeof Router> = Router();
@@ -477,7 +477,7 @@ documentsRouter.post("/:id/shares", async (req, res) => {
 
     const userRow = await query("SELECT id, email, display_name FROM users WHERE LOWER(email) = LOWER($1)", [email]);
     if (userRow.rows.length === 0) {
-      return res.status(404).json({ success: false, error: "No CodeCollab user with that email" });
+      return res.status(404).json({ success: false, error: "No GitLive user with that email" });
     }
     const target = userRow.rows[0];
     if (target.id === userId) {

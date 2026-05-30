@@ -17,8 +17,8 @@ COPY packages/shared/ packages/shared/
 COPY apps/server/ apps/server/
 
 # Build shared package first, then server
-RUN pnpm --filter @codecollab/shared build
-RUN pnpm --filter @codecollab/server build
+RUN pnpm --filter @gitlive/shared build
+RUN pnpm --filter @gitlive/server build
 
 # Copy schema.sql to dist (tsc doesn't copy non-TS files)
 RUN cp apps/server/src/db/schema.sql apps/server/dist/db/schema.sql

@@ -1,4 +1,4 @@
-// CodeCollab Server — Entry Point
+// GitLive Server — Entry Point
 // Express REST API + Socket.io WebSocket server
 
 
@@ -10,7 +10,7 @@ import { Server as SocketIOServer } from "socket.io";
 import type {
   ServerToClientEvents,
   ClientToServerEvents,
-} from "@codecollab/shared";
+} from "@gitlive/shared";
 
 // Config
 const PORT = parseInt(process.env.PORT || process.env.SERVER_PORT || "3001", 10);
@@ -66,7 +66,7 @@ app.set("io", io);
 // Start
 if (process.env.NODE_ENV !== "test") {
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`\n🚀 CodeCollab server running on http://localhost:${PORT}`);
+    console.log(`\n🚀 GitLive server running on http://localhost:${PORT}`);
     console.log(`   CORS origin: ${CORS_ORIGIN}\n`);
   });
 }

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Octokit } from "octokit";
 import { query } from "../db/index.js";
 import { authenticate } from "../middleware/auth.js";
-import type { Review, ReviewFile } from "@codecollab/shared";
+import type { Review, ReviewFile } from "@gitlive/shared";
 import {
   currentDocText,
   getChangedFolderFiles,
@@ -106,7 +106,7 @@ reviewsRouter.post("/submit", async (req, res) => {
     const trailers = await buildCoAuthorTrailers(changedDocIds, userId);
 
     // 1. Push the changes to the head branch.
-    await pushFiles(token, owner, repoName, baseBranch, headBranch, changed, commitMessage || (title ?? "Update via CodeCollab"), trailers);
+    await pushFiles(token, owner, repoName, baseBranch, headBranch, changed, commitMessage || (title ?? "Update via GitLive"), trailers);
 
     // 2. Open (or reuse) the pull request head -> base.
     let pr: { number: number; url: string } | null = null;

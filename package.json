@@ -1,5 +1,5 @@
 {
-  "name": "codecollab",
+  "name": "gitlive",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,7 +7,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "db:migrate": "pnpm --filter @codecollab/server db:migrate"
+    "db:migrate": "pnpm --filter @gitlive/server db:migrate"
   },
   "devDependencies": {
     "turbo": "^2.5.0",
