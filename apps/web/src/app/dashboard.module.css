@@ -91,7 +91,7 @@
   font-weight: 600;
   font-size: 0.95rem;
   transition: all var(--transition-fast);
-  box-shadow: 0 2px 10px rgba(108, 99, 255, 0.2);
+  box-shadow: 0 2px 10px rgba(113, 175, 229, 0.2);
 }
 
 .newButton:hover {
@@ -215,7 +215,7 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-md);
-  background: rgba(108, 99, 255, 0.1);
+  background: rgba(113, 175, 229, 0.1);
   color: var(--color-accent);
   display: flex;
   align-items: center;

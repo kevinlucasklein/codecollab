@@ -91,9 +91,9 @@
 }
 
 .shareButton {
-  background: rgba(108, 99, 255, 0.1);
+  background: rgba(113, 175, 229, 0.1);
   color: var(--color-accent);
-  border: 1px solid rgba(108, 99, 255, 0.2);
+  border: 1px solid rgba(113, 175, 229, 0.2);
   padding: 4px 12px;
   border-radius: var(--radius-sm);
   font-size: 0.85rem;

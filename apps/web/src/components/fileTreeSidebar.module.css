@@ -110,7 +110,7 @@
 }
 
 .fileItem.active {
-  background: rgba(108, 99, 255, 0.1);
+  background: rgba(113, 175, 229, 0.1);
   color: var(--color-accent);
 }
 
