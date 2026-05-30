@@ -140,6 +140,43 @@ export interface CommentThread {
   comments: Comment[]; // Hydrated by join
 }
 
+// Reviews (folder-level, pull-request-style)
+
+export type ReviewStatus = 'open' | 'approved' | 'changes_requested' | 'closed';
+
+export interface Review {
+  id: string;
+  ownerId: string;
+  githubRepo: string;
+  githubBranch: string;
+  requesterId: string;
+  requesterName?: string;
+  reviewerId: string;
+  reviewerName?: string;
+  title: string;
+  description?: string;
+  status: ReviewStatus;
+  headBranch?: string;
+  githubPrNumber?: number;
+  githubPrUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// A single changed file within a review. When the review is backed by a GitHub
+// PR, `patch` holds GitHub's unified diff; otherwise base/current are provided
+// for a locally-computed diff.
+export interface ReviewFile {
+  docId?: string;
+  path: string;
+  patch?: string;
+  additions?: number;
+  deletions?: number;
+  status?: string;
+  baseContent?: string;
+  currentContent?: string;
+}
+
 // API Response Wrappers
 
 export interface ApiResponse<T> {

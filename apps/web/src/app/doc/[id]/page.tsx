@@ -13,8 +13,9 @@ import { CommentSidebar } from "../../../components/CommentSidebar";
 import { FileTreeSidebar } from "../../../components/FileTreeSidebar";
 import { ShareDialog } from "../../../components/ShareDialog";
 import { PushDialog } from "../../../components/PushDialog";
+import { RequestReviewDialog } from "../../../components/RequestReviewDialog";
 import type { FolderContext } from "../../../lib/folderLink";
-import { Sidebar, GitBranch } from "lucide-react";
+import { Sidebar, GitBranch, GitPullRequest } from "lucide-react";
 import styles from "../../../components/editor.module.css";
 import type { Document, PresenceUser, FolderPresenceEntry } from "@codecollab/shared";
 import toast from "react-hot-toast";
@@ -54,6 +55,7 @@ export default function DocumentPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isPushOpen, setIsPushOpen] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
   // Map of docId -> collaborators currently on that file (within the folder).
   const [folderPresence, setFolderPresence] = useState<Map<string, PresenceUser[]>>(new Map());
 
@@ -447,14 +449,24 @@ export default function DocumentPage() {
             {isConnected ? (isSynced ? "Synced" : "Syncing...") : "Disconnected"}
           </div>
           {folderContext && folderContext.repo && (
-            <button
-              onClick={() => setIsPushOpen(true)}
-              className={styles.shareButton}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-              title="Push changed files to GitHub"
-            >
-              <GitBranch size={14} /> Push
-            </button>
+            <>
+              <button
+                onClick={() => setIsReviewOpen(true)}
+                className={styles.shareButton}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                title="Push, open a GitHub PR, and request a review"
+              >
+                <GitPullRequest size={14} /> Submit for review
+              </button>
+              <button
+                onClick={() => setIsPushOpen(true)}
+                className={styles.shareButton}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                title="Push changed files to GitHub"
+              >
+                <GitBranch size={14} /> Push
+              </button>
+            </>
           )}
           <button onClick={handleShareClick} className={styles.shareButton}>
             Share
@@ -521,6 +533,10 @@ export default function DocumentPage() {
 
       {isPushOpen && folderContext && (
         <PushDialog folder={folderContext} onClose={() => setIsPushOpen(false)} />
+      )}
+
+      {isReviewOpen && folderContext && (
+        <RequestReviewDialog folder={folderContext} onClose={() => setIsReviewOpen(false)} />
       )}
     </div>
   );

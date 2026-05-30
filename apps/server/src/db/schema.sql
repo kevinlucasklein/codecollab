@@ -67,6 +67,33 @@ CREATE TABLE IF NOT EXISTS doc_contributors (
   PRIMARY KEY (document_id, user_id)
 );
 
+-- Layer 6: Folder-level review requests (pull-request-style flow).
+-- A review targets a folder (owner_id + repo + branch) and is assigned to one
+-- reviewer. Diffs are computed live (current content vs imported base_content)
+-- and inline feedback reuses the existing comment_threads on each document.
+CREATE TABLE IF NOT EXISTS reviews (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  github_repo   VARCHAR(255) NOT NULL,
+  github_branch VARCHAR(255) NOT NULL DEFAULT '',
+  requester_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reviewer_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title         VARCHAR(255) NOT NULL DEFAULT 'Review request',
+  description   TEXT,
+  -- 'open' | 'approved' | 'changes_requested' | 'closed'
+  status        VARCHAR(20) NOT NULL DEFAULT 'open',
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_reviewer ON reviews(reviewer_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_requester ON reviews(requester_id);
+
+-- The pushed head branch and the opened GitHub PR backing this review.
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS head_branch VARCHAR(255);
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS github_pr_number INTEGER;
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS github_pr_url TEXT;
+
 ALTER TABLE documents
 ADD COLUMN IF NOT EXISTS github_repo VARCHAR(255),
 ADD COLUMN IF NOT EXISTS github_branch VARCHAR(255),

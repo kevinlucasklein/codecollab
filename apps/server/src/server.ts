@@ -31,6 +31,7 @@ import { documentsRouter } from "./routes/documents.js";
 import { commentsRouter } from "./routes/comments.js";
 import { githubRouter } from "./routes/github.js";
 import { foldersRouter } from "./routes/folders.js";
+import { reviewsRouter } from "./routes/reviews.js";
 
 // --- API Routes ---
 app.use("/api/auth", authRouter);
@@ -38,6 +39,7 @@ app.use("/api/documents", documentsRouter);
 app.use("/api/documents/:documentId/comments", commentsRouter);
 app.use("/api/github", githubRouter);
 app.use("/api/folders", foldersRouter);
+app.use("/api/reviews", reviewsRouter);
 
 // HTTP Server
 const httpServer = http.createServer(app);

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
-import type { Document } from "@codecollab/shared";
+import type { Document, Review } from "@codecollab/shared";
 import { getFileIconMeta } from "../lib/fileIcons";
 import { folderKey, folderContextFromDoc, fileHrefInFolder, folderQuery } from "../lib/folderLink";
 import { Pencil, Share2, Trash2, Folder, FolderOpen, ChevronRight, ChevronDown, ExternalLink } from "lucide-react";
@@ -62,6 +62,7 @@ export default function DashboardPage() {
   const [editingTitle, setEditingTitle] = useState("");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [shareTarget, setShareTarget] = useState<{ target: ShareTarget; link: string } | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   const owned = useMemo(
     () => groupDocs(documents.filter((d) => !d.access || d.access === "owner")),
@@ -101,6 +102,21 @@ export default function DashboardPage() {
     };
 
     fetchDocs();
+  }, [user, token]);
+
+  // Fetch reviews (requested by me or assigned to me).
+  useEffect(() => {
+    if (!user || !token) return;
+    const fetchReviews = async () => {
+      try {
+        const res = await fetch(`${SERVER_URL}/api/reviews`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (data.success) setReviews(data.data);
+      } catch {
+        /* ignore */
+      }
+    };
+    fetchReviews();
   }, [user, token]);
 
   const toggleFolder = (key: string) => {
@@ -442,6 +458,53 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {reviews.filter((r) => r.status !== "closed").length > 0 && (
+          <div style={{ marginBottom: "var(--spacing-2xl)" }}>
+            <h2 className={styles.sectionTitle} style={{ marginTop: 0 }}>Reviews</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {reviews
+                .filter((r) => r.status !== "closed")
+                .map((r) => {
+                  const meta =
+                    r.status === "approved"
+                      ? { label: "Approved", color: "#4ade80" }
+                      : r.status === "changes_requested"
+                      ? { label: "Changes requested", color: "#f87171" }
+                      : { label: "Open", color: "#9ca3af" };
+                  const needsMyReview = r.reviewerId === user?.id && r.status === "open";
+                  return (
+                    <div
+                      key={r.id}
+                      onClick={() => router.push(`/review/${r.id}`)}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                        padding: "12px 16px", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)",
+                        background: "rgba(255,255,255,0.02)", cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                          {r.title}
+                          {needsMyReview && (
+                            <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#fbbf24", background: "rgba(251,191,36,0.15)", padding: "1px 8px", borderRadius: 10 }}>
+                              NEEDS YOUR REVIEW
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "var(--color-text-tertiary)", marginTop: 2 }}>
+                          {r.githubRepo} · {r.githubBranch || "(default)"} — {r.requesterName} → {r.reviewerName}
+                        </div>
+                      </div>
+                      <span style={{ color: meta.color, border: `1px solid ${meta.color}55`, background: `${meta.color}18`, padding: "3px 10px", borderRadius: 16, fontSize: "0.75rem", fontWeight: 600, whiteSpace: "nowrap" }}>
+                        {meta.label}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
 
         {isFetching ? (
           <div className={styles.docsLoading}>Loading documents...</div>
