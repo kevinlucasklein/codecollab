@@ -365,3 +365,37 @@ async function saveDocToDatabase(docId: string, doc: Y.Doc) {
   // Persist contributors alongside the save.
   await flushContributors(docId);
 }
+
+// In-memory set of user IDs that have made edits to a document since the last flush.
+const pendingContributors = new Map<string, Set<string>>();
+
+function recordContributor(docId: string, userId: string) {
+  let contributors = pendingContributors.get(docId);
+  if (!contributors) {
+    contributors = new Set();
+    pendingContributors.set(docId, contributors);
+  }
+  contributors.add(userId);
+}
+
+async function flushContributors(docId: string) {
+  const contributors = pendingContributors.get(docId);
+  if (!contributors || contributors.size === 0) return;
+
+  try {
+    const userIds = Array.from(contributors);
+    for (const userId of userIds) {
+      await query(
+        `INSERT INTO doc_contributors (document_id, user_id)
+         VALUES ($1, $2)
+         ON CONFLICT (document_id, user_id)
+         DO UPDATE SET updated_at = NOW()`,
+        [docId, userId]
+      );
+    }
+    // Remove flushed contributors from memory
+    pendingContributors.delete(docId);
+  } catch (error) {
+    console.error(`Failed to flush contributors for document ${docId}:`, error);
+  }
+}
